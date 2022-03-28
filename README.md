@@ -1,5 +1,7 @@
 # Intelligent-Multimedia-Art-Generation
 
+Music generation with CLIP-like text-music alignment model and Transformer music decoder.
+
 ## Documents
 | Document             | Version | Link                                                                                                                                |
 |----------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------|
