@@ -1,0 +1,11 @@
+ftfy
+regex
+tqdm
+torch>=1.6.0
+torchvision
+PyYAML
+scipy
+numpy
+matplotlib
+pylab-sdk
+requests
