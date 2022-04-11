@@ -11,7 +11,9 @@ from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normal
 from tqdm import tqdm
 
 from .model import build_model
-from .simple_tokenizer import SimpleTokenizer as _Tokenizer
+from simple_tokenizer import SimpleTokenizer as _Tokenizer
+import yaml
+from musemorphose import MuseMorphose
 
 try:
     from torchvision.transforms import InterpolationMode
@@ -37,6 +39,10 @@ _MODELS = {
     "ViT-B/16": "https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt",
     "ViT-L/14": "https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt",
 }
+
+config = yaml.load(open("config/default.yaml", 'r'), Loader=yaml.FullLoader)
+device = config['training']['device']
+ckpt_path = "musemorphose_pretrained_weights.pt"
 
 
 def _download(url: str, root: str):
@@ -90,6 +96,20 @@ def available_models() -> List[str]:
     return list(_MODELS.keys())
 
 
+def load_MuseMorphose():
+
+    mconf = config['model']
+    model = MuseMorphose(
+        mconf['enc_n_layer'], mconf['enc_n_head'], mconf['enc_d_model'], mconf['enc_d_ff'],
+        mconf['dec_n_layer'], mconf['dec_n_head'], mconf['dec_d_model'], mconf['dec_d_ff'],
+        mconf['d_latent'], mconf['d_embed'], config['data']['vocab_size'],
+        d_polyph_emb=mconf['d_polyph_emb'], d_rfreq_emb=mconf['d_rfreq_emb'],
+        cond_mode=mconf['cond_mode']
+    ).to(device)
+    model.eval()
+    model.load_state_dict(torch.load(ckpt_path, map_location='cpu'))
+
+
 def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit: bool = False, download_root: str = None):
     """Load a CLIP model
 
@@ -135,7 +155,7 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
             state_dict = torch.load(opened_file, map_location="cpu")
 
     if not jit:
-        model = build_model(state_dict or model.state_dict()).to(device)
+        model = build_model(state_dict or model.state_dict(), config).to(device)
         if str(device) == "cpu":
             model.float()
         return model, _transform(model.visual.input_resolution)
