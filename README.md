@@ -14,27 +14,27 @@ Music generation with CLIP-like text-music alignment model and Transformer music
 ## Directory Structure
 root  
 ~/config  
-    /default.yaml  
+  /default.yaml  
 ~/clip  // CLIP model  
-    /__init__.py  
-    /clip.py // load CLIP model from checkpoint  
-    /model.py // define model architecture  
-    /simple_tokenizer.py  
+  /__init__.py  
+  /clip.py // load CLIP model from checkpoint  
+  /model.py // define model architecture  
+  /simple_tokenizer.py  
 ~/musemorphose // MuseMorphose model  
-    /model  
-        /musemorphose.py // define decoder & MuseMorphose model  
-        /transformer_encoder.py // define encoder  
-        /transformer_helpers.py // define positionEncoding & tokenEncoding layer  
-     /__init__.py  
-    /attributes.py  
-    /dataloader.py  
-    /extract_encoder.py  
-    /generate.py  
-    /remi2midi.py  
-    /train.py  
-    /utils.py  
+  /model  
+    /musemorphose.py // define decoder & MuseMorphose model  
+    /transformer_encoder.py // define encoder  
+    /transformer_helpers.py // define positionEncoding & tokenEncoding layer  
+   /__init__.py  
+  /attributes.py  
+  /dataloader.py  
+  /extract_encoder.py  
+  /generate.py  
+  /remi2midi.py  
+  /train.py  
+  /utils.py  
 ~/model  
-    /model.py // define MusicCLIP model  
-    /load_model.py // load CLIP and MuseMorphose & create MusicCLIP instance  
+  /model.py // define MusicCLIP model  
+  /load_model.py // load CLIP and MuseMorphose & create MusicCLIP instance  
     
     
