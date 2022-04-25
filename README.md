@@ -16,7 +16,7 @@ root
 ~/config  
   /default.yaml  
 ~/clip  // CLIP model  
-  /\__init__.py  
+  /\_\_init__.py  
   /clip.py // load CLIP model from checkpoint  
   /model.py // define model architecture  
   /simple_tokenizer.py  
@@ -25,7 +25,7 @@ root
     /musemorphose.py // define decoder & MuseMorphose model  
     /transformer_encoder.py // define encoder  
     /transformer_helpers.py // define positionEncoding & tokenEncoding layer  
-   /\__init__.py  
+   /\_\_init__.py  
   /attributes.py  
   /dataloader.py  
   /extract_encoder.py  
