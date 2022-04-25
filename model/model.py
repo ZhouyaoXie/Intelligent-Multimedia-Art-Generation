@@ -69,8 +69,6 @@ class MusicCLIP:
         # music
         self.token_emb = TokenEmbedding(n_token, d_embed, d_model)
         self.pe = PositionalEncoding(d_embed)
-        self.token_emb = TokenEmbedding(n_token, d_embed, d_model)
-        self.pe = PositionalEncoding(d_embed)
         self.encoder = VAETransformerEncoder(
         n_layer, n_head, d_model, d_ff, d_vae_latent, dropout, activation
         )

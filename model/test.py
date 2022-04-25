@@ -1,6 +1,6 @@
 from model import MusicCLIP
-from load_model import load_clip
-import sys, yaml
+from load_model import load_clip, load_musemorphose, load
+import yaml
 
 config_path = "config/default.yaml"
 config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
@@ -26,4 +26,4 @@ mdl = MusicCLIP(embed_dim = t_con['embed_dim'],
                  transformer_heads = t_con['transformer_heads'],
                  transformer_layers = t_con['transformer_layers'])
 
-mdl = load_clip()
+mdl = load("ViT-B/32")

@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from transformer_encoder import VAETransformerEncoder
-from transformer_helpers import (
+from musemorphose.model.transformer_encoder import VAETransformerEncoder
+from musemorphose.model.transformer_helpers import (
   weights_init, PositionalEncoding, TokenEmbedding, generate_causal_mask
 )
 

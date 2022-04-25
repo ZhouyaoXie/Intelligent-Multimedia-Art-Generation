@@ -9,19 +9,20 @@
 - **encode_text**: 
     - ~~TODO: modify CLIP function~~
     - ~~TODO: test locally~~
-    - TODO: test under CUDA
+    - TODO: CUDA test
 - **encode_music**: 
-    - TODO: modify MuseMorphose forward function
-    - TODO: test 
+    - ~~TODO: modify MuseMorphose forward function~~
+    - TODO: CUDA test 
 - **forward**: 
     - TODO: modify CLIP function, add in music part
-    - TODO: test
+    - TODO: CUDA test
 
 # load_model.py
 
 - **load_CLIP**: 
-    - TODO: load CLIP model from pretrained weights and test locally
+    - ~~TODO: load CLIP model from pretrained weights~~
 - **load_MuseMorphose_encoder**:
-    - TODO: load MuseMorphose model and return encoder, TokenEmbedding layer, and FF layer
+    - ~~TODO: load MuseMorphose model and return encoder, TokenEmbedding layer, and FF layer~~
 - **load**: 
-    - TODO: initialize MusicCLIP model using load_CLIP() and load_MuseMorphose_encoder
+    - ~~TODO: initialize MusicCLIP model using load_CLIP() and load_MuseMorphose_encoder~~
+    - TODO: CUDA test
