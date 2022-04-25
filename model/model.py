@@ -2,13 +2,21 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
+import os, sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from clip.model import Transformer, LayerNorm
+from musemorphose.model.transformer_encoder import VAETransformerEncoder
+from musemorphose.model.transformer_helpers import (
+  weights_init, PositionalEncoding, TokenEmbedding
+)
 
 class MusicCLIP:
     def __init__(self,
                  embed_dim: int,
-                 # vision
+                 # music
                  n_layer: int, 
                  n_head: int, 
                  d_model: int, 
@@ -16,6 +24,8 @@ class MusicCLIP:
                  d_vae_latent: int, 
                  dropout: float, 
                  activation: str,
+                 n_token: int,
+                 d_embed: int,
                  # text
                  context_length: int,
                  vocab_size: int,
@@ -23,7 +33,7 @@ class MusicCLIP:
                  transformer_heads: int,
                  transformer_layers: int
                  ):
-
+                 
         # text 
         self.embed_dim = embed_dim
         self.context_length = context_length
@@ -32,7 +42,7 @@ class MusicCLIP:
         self.transformer_heads = transformer_heads
         self.transformer_layers = transformer_layers
 
-        # vision
+        # music
         self.n_layer = n_layer
         self.n_head = n_head
         self.d_model = d_model 
@@ -40,6 +50,8 @@ class MusicCLIP:
         self.d_vae_latent = d_vae_latent
         self.dropout = dropout 
         self.activation = activation
+        self.n_token = n_token
+        self.d_embed = d_embed
 
         # text
         self.transformer = Transformer(
@@ -55,16 +67,28 @@ class MusicCLIP:
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
         # music
-        self.tr_encoder_layer = nn.TransformerEncoderLayer(
-            d_model, n_head, d_ff, dropout, activation
+        self.token_emb = TokenEmbedding(n_token, d_embed, d_model)
+        self.pe = PositionalEncoding(d_embed)
+        self.token_emb = TokenEmbedding(n_token, d_embed, d_model)
+        self.pe = PositionalEncoding(d_embed)
+        self.encoder = VAETransformerEncoder(
+        n_layer, n_head, d_model, d_ff, d_vae_latent, dropout, activation
         )
-        self.tr_encoder = nn.TransformerEncoder(
-            self.tr_encoder_layer, n_layer
-        )
-        self.fc_mu = nn.Linear(d_model, d_vae_latent)
-        self.fc_logvar = nn.Linear(d_model, d_vae_latent)
+        self.emb_dropout = nn.Dropout(self.dropout)
+
+        # music attributes
+        self.d_rfreq_emb = 32
+        self.d_polyph_emb = 32
+        self.rfreq_attr_emb = TokenEmbedding(8, 32, 32)
+        self.polyph_attr_emb = TokenEmbedding(8, 32, 32)
+
+        # initialize parameters
+        self.initialize_params()
 
     def initialize_params(self):
+        # music
+        weights_init(self)
+
         # text
         nn.init.normal_(self.token_embedding.weight, std=0.02)
         nn.init.normal_(self.positional_embedding, std=0.01)
@@ -80,5 +104,10 @@ class MusicCLIP:
         if self.text_projection is not None:
             nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
 
-        # music
-        
+    def build_attention_mask(self):
+        # lazily create causal attention mask, with full attention between the vision tokens
+        # pytorch uses additive attention mask; fill with -inf
+        mask = torch.empty(self.context_length, self.context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # zero out the lower diagonal
+        return mask

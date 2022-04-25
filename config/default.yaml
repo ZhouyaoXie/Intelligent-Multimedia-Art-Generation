@@ -26,6 +26,14 @@ music:
     pretrained_params_path:      null
     pretrained_optim_path:       null
 
+text: # just for testing purpose
+    embed_dim: 1024
+    context_length: 64
+    vocab_size: 1024
+    transformer_width: 128
+    transformer_heads: 8
+    transformer_layers: 12
+
 training:
     device:           cuda:0
     ckpt_dir:         ./ckpt/enc_dec_12L-16_bars-seqlen_1280

@@ -2,8 +2,10 @@
 
 ### class MusicCLIP
 
-- **__init__**: ~~TODO~~
-- **initialize_params**: TODO
+- **__init__**:
+    - ~~TODO: define text and music encoder architecture~~
+    - ~~TODO: test initialize model locally~~
+- **initialize_params**: ~~TODO~~
 - **encode_text**: TODO
 - **encode_music**: TODO
 - **forward**: TODO
