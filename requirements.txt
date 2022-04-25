@@ -1,8 +1,10 @@
 ftfy
 regex
 tqdm
-torch>=1.6.0
+torch
 torchvision
+torch>=1.6.0
+miditoolkit
 PyYAML
 scipy
 numpy
