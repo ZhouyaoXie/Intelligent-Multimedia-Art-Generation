@@ -159,7 +159,7 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
                     node.copyAttributes(device_node)
 
     model.apply(patch_device)
-    patch_device(model.encode_image)
+    patch_device(model.encode_music)
     patch_device(model.encode_text)
 
     # patch dtype to float32 on CPU
@@ -190,7 +190,7 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
 
         model.float()
 
-    return model, _transform(model.input_resolution.item())
+    return model
 
 
 def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate: bool = False) -> Union[torch.IntTensor, torch.LongTensor]:

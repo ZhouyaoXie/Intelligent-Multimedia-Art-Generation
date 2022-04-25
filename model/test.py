@@ -1,4 +1,5 @@
 from model import MusicCLIP
+from load_model import load_clip
 import sys, yaml
 
 config_path = "config/default.yaml"
@@ -24,3 +25,5 @@ mdl = MusicCLIP(embed_dim = t_con['embed_dim'],
                  transformer_width = t_con['transformer_width'],
                  transformer_heads = t_con['transformer_heads'],
                  transformer_layers = t_con['transformer_layers'])
+
+mdl = load_clip()
