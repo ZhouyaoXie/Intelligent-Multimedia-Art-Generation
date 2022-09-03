@@ -11,7 +11,7 @@
     - ~~TODO: test locally~~
     - TODO: CUDA test
 - **encode_music**: 
-    - ~~TODO: modify MuseMorphose forward function~~
+    - TODO: modify MuseMorphose forward function
     - TODO: CUDA test 
 - **forward**: 
     - TODO: modify CLIP function, add in music part
