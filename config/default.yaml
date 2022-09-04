@@ -9,12 +9,11 @@ data:
     dec_seqlen:       1280               
     batch_size:       4
 
-music:
+model:
     enc_n_layer:      12
     enc_n_head:       8
     enc_d_model:      512
     enc_d_ff:         2048
-    vocab_size:       1024    # just for testing
     dec_n_layer:      12
     dec_n_head:       8
     dec_d_model:      512
@@ -26,14 +25,6 @@ music:
     cond_mode:        in-attn
     pretrained_params_path:      null
     pretrained_optim_path:       null
-
-text: # just for testing purpose
-    embed_dim: 1024
-    context_length: 64
-    vocab_size: 1024
-    transformer_width: 128
-    transformer_heads: 8
-    transformer_layers: 12
 
 training:
     device:           cuda:0

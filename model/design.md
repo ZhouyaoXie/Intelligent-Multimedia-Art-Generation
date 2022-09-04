@@ -9,13 +9,25 @@
 - **encode_text**: 
     - ~~TODO: modify CLIP function~~
     - ~~TODO: test locally~~
-    - TODO: CUDA test
+    - TODO: test on CUDA
 - **encode_music**: 
-    - TODO: modify MuseMorphose forward function
-    - TODO: CUDA test 
+    - ~~TODO: modify MuseMorphose forward function~~
+    - TODO: test 
 - **forward**: 
-    - TODO: modify CLIP function, add in music part
-    - TODO: CUDA test
+    - TODO: call encode_text and encode_music; implement cross attention  
+    - TODO: test
+- **compute_loss**:
+    - TODO: compute contrastive loss
+
+# music_encoder.py
+
+### class MusicEncoder
+
+- **__init__**:
+    - TODO: implement
+    - TODO: test
+
+- **d**
 
 # load_model.py
 
