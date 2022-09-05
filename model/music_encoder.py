@@ -33,7 +33,8 @@ class VAETransformerEncoder(nn.Module):
 
 
 class MusicEncoder(nn.Module):
-  def __init__(self, enc_n_layer, enc_n_head, enc_d_model, enc_d_ff,
+  def __init__(self, 
+    enc_n_layer, enc_n_head, enc_d_model, enc_d_ff,
     d_vae_latent, d_embed, n_token,
     enc_dropout=0.1, enc_activation='relu',
     d_rfreq_emb=32, d_polyph_emb=32,
@@ -41,6 +42,7 @@ class MusicEncoder(nn.Module):
     is_training=True, use_attr_cls=True,
     cond_mode='in-attn'
   ):
+    super().__init__()
     self.enc_n_layer = enc_n_layer
     self.enc_n_head = enc_n_head
     self.enc_d_model = enc_d_model
