@@ -40,8 +40,10 @@ if __name__ == "__main__":
     d_polyph_emb=mconf['d_polyph_emb'], d_rfreq_emb=mconf['d_rfreq_emb'],
     cond_mode=mconf['cond_mode']
   ).to(device)
-  if pretrained_params_path:
-    model.load_state_dict(torch.load(pretrained_params_path), strict = False)
+  for name, para in model.named_parameters():
+    print('{}: {}'.format(name, para.shape))
+  # if pretrained_params_path:
+  #   model.load_state_dict(torch.load(pretrained_params_path), strict = False)
 
-    print("save encoder and decoder weights...")
-    torch.save(model.state_dict(), "music_encoder_weight.pt")
+  #   print("save encoder and decoder weights...")
+  #   torch.save(model.state_dict(), "music_encoder_weight.pt")
