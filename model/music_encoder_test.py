@@ -43,5 +43,5 @@ if __name__ == "__main__":
   if pretrained_params_path:
     model.load_state_dict(torch.load(pretrained_params_path), strict = False)
 
-    print("save encoder and decoder weights...")
+    print("save encoder weights...")
     torch.save(model.state_dict(), "music_encoder_weight.pt")
