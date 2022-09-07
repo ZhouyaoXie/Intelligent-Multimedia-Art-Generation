@@ -4,8 +4,10 @@ import os
 import time
 import yaml
 import torch
+sys.path.append("x:\\Master\\Capstone\\Intelligent-Multimedia-Art-Generation\\model\\..")
 from musemorphose.utils import pickle_load
 from musemorphose.dataloader import REMIFullSongTransformerDataset
+sys.path.remove("x:\\Master\\Capstone\\Intelligent-Multimedia-Art-Generation\\model\\..")
 from torch.utils.data import DataLoader
 
 config_path = "config/default.yaml"
