@@ -4,10 +4,16 @@ import os
 import time
 import yaml
 import torch
-sys.path.append("x:\\Master\\Capstone\\Intelligent-Multimedia-Art-Generation\\model\\..")
+appended_path = None 
+for path in sys.path:
+  if "Intelligent-Multimedia-Art-Generation\\model" in path:
+    sys.path.append(path + '\\..')
+    appended_path = path + '\\..'
+    break 
 from musemorphose.utils import pickle_load
 from musemorphose.dataloader import REMIFullSongTransformerDataset
-sys.path.remove("x:\\Master\\Capstone\\Intelligent-Multimedia-Art-Generation\\model\\..")
+if appended_path is not None:
+  sys.path.remove(appended_path)
 from torch.utils.data import DataLoader
 
 config_path = "config/default.yaml"
