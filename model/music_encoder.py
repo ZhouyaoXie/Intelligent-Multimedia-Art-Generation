@@ -3,8 +3,20 @@ from torch import nn
 import torch.nn.functional as F
 from music_encoder_utils import TokenEmbedding, PositionalEncoding, weights_init
 
+""" Class for a transformer encoder 
+
+"""
 class VAETransformerEncoder(nn.Module):
-  def __init__(self, n_layer, n_head, d_model, d_ff, d_vae_latent, dropout=0.1, activation='relu'):
+  def __init__(self, 
+    n_layer, n_head, d_model, d_ff, 
+    d_vae_latent, dropout=0.1, activation='relu'
+  ):
+    """ Initialize a transformer encoder.
+    
+    Params:
+      n_layer: the number of sub-encoder-layers in the encoder
+      n_head: 
+    """
     super(VAETransformerEncoder, self).__init__()
     self.n_layer = n_layer
     self.n_head = n_head
@@ -118,3 +130,62 @@ class MusicEncoder(nn.Module):
     dec_logits = self.dec_out_proj(dec_out)
 
     return mu, logvar, dec_logits
+
+  
+  def reparameterize(self, mu, logvar, use_sampling=True, sampling_var=1.):
+    std = torch.exp(0.5 * logvar).to(mu.device)
+    if use_sampling:
+      eps = torch.randn_like(std).to(mu.device) * sampling_var
+    else:
+      eps = torch.zeros_like(std).to(mu.device)
+
+    return eps * std + mu
+
+  def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
+    token_emb = self.token_emb(inp)
+    enc_inp = self.emb_dropout(token_emb) + self.pe(inp.size(0))
+
+    _, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
+    mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
+    vae_latent = self.reparameterize(mu, logvar, use_sampling=use_sampling, sampling_var=sampling_var)
+
+    return vae_latent
+
+  def generate(self, inp, dec_seg_emb, rfreq_cls=None, polyph_cls=None, keep_last_only=True):
+    token_emb = self.token_emb(inp)
+    dec_inp = self.emb_dropout(token_emb) + self.pe(inp.size(0))
+
+    if rfreq_cls is not None and polyph_cls is not None:
+      dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
+      dec_polyph_emb = self.polyph_attr_emb(polyph_cls)
+      dec_seg_emb_cat = torch.cat([dec_seg_emb, dec_rfreq_emb, dec_polyph_emb], dim=-1)
+    else:
+      dec_seg_emb_cat = dec_seg_emb
+
+    out = self.decoder(dec_inp, dec_seg_emb_cat)
+    out = self.dec_out_proj(out)
+
+    if keep_last_only:
+      out = out[-1, ...]
+
+    return out
+
+
+  def compute_loss(self, mu, logvar, beta, fb_lambda, dec_logits, dec_tgt):
+    recons_loss = F.cross_entropy(
+      dec_logits.view(-1, dec_logits.size(-1)), dec_tgt.contiguous().view(-1), 
+      ignore_index=self.n_token - 1, reduction='mean'
+    ).float()
+
+    kl_raw = -0.5 * (1 + logvar - mu ** 2 - logvar.exp()).mean(dim=0)
+    kl_before_free_bits = kl_raw.mean()
+    kl_after_free_bits = kl_raw.clamp(min=fb_lambda)
+    kldiv_loss = kl_after_free_bits.mean()
+
+    return {
+      'beta': beta,
+      'total_loss': recons_loss + beta * kldiv_loss,
+      'kldiv_loss': kldiv_loss,
+      'kldiv_raw': kl_before_free_bits,
+      'recons_loss': recons_loss
+    }
