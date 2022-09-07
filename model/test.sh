@@ -16,4 +16,5 @@ rm remi_dataset.tar.gz
 python3 musemorphose/attributes.py
 
 # run python test script
-python3 model/music_encoder_test.py
+CURRENTDATE=`date +"%Y_%m_%d_%T"`
+python3 model/music_encoder_test.py >> "test_log_${CURRENTDATE}"
