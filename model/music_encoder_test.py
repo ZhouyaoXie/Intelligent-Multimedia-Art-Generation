@@ -108,7 +108,7 @@ def test_load_model():
 
 
 def test_forward(dloader, num_to_test):
-    global train_steps 
+    global trained_steps 
 
     test_count = 0
     model.eval()
