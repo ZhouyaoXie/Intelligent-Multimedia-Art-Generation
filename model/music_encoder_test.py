@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 # import module from the same directory 
 from music_encoder import MusicEncoder
 
+print("importing module...")
 # import module from parent directory
 appended_path = None 
 for path in sys.path:
@@ -26,6 +27,7 @@ from musemorphose.dataloader import REMIFullSongTransformerDataset
 if appended_path is not None:
   sys.path.remove(appended_path)
 
+print("loading config...")
 config_path = "config/default.yaml"
 config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
@@ -142,10 +144,13 @@ def test_forward(dloader, num_to_test):
 if __name__ == "__main__":
 
     # test dataloader
+    print("testing dataloader...")
     dloader, dloader_val = test_dataloader()
 
+    print("testing MusicEncoder...")
     # test loading MusicEncoder
     model = test_load_model()
 
     # test forward
+    print("testing music encoder forward...")
     test_forward(dloader, 3)
