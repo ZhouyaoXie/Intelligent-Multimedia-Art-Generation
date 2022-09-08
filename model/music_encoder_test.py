@@ -1,20 +1,30 @@
-from music_encoder import MusicEncoder
 import sys
 import os
 import time
 import yaml
 import torch
+from torch.utils.data import DataLoader
+
+# import module from the same directory 
+from music_encoder import MusicEncoder
+
+# import module from parent directory
 appended_path = None 
 for path in sys.path:
-  if "Intelligent-Multimedia-Art-Generation\\model" in path:
-    sys.path.append(path + '\\..')
-    appended_path = path + '\\..'
-    break 
+  for delimiter in ["\\", "/"]:
+    if "Intelligent-Multimedia-Art-Generation{d}model".format(
+      d = delimiter
+    ) in path:
+      appended_path = '{path}{d}..'.format(
+        path = path,
+        d = delimiter,
+      )
+      sys.path.append(appended_path)
+      break 
 from musemorphose.utils import pickle_load
 from musemorphose.dataloader import REMIFullSongTransformerDataset
 if appended_path is not None:
   sys.path.remove(appended_path)
-from torch.utils.data import DataLoader
 
 config_path = "config/default.yaml"
 config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
