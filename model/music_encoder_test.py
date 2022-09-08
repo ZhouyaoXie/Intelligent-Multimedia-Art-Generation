@@ -5,27 +5,28 @@ import yaml
 import torch
 from torch.utils.data import DataLoader
 
-# import module from the same directory 
+# import module from the same directory
 from music_encoder import MusicEncoder
 
 print("importing module...")
 # import module from parent directory
-appended_path = None 
+appended_path = None
+print(sys.path)
 for path in sys.path:
-  for delimiter in ["\\", "/"]:
-    if "Intelligent-Multimedia-Art-Generation{d}model".format(
-      d = delimiter
-    ) in path:
-      appended_path = '{path}{d}..'.format(
-        path = path,
-        d = delimiter,
-      )
-      sys.path.append(appended_path)
-      break 
-from musemorphose.utils import pickle_load
+    for delimiter in ["\\", "/"]:
+        if "Intelligent-Multimedia-Art-Generation{d}model".format(
+            d=delimiter
+        ) in path:
+            appended_path = '{path}{d}..'.format(
+                path=path,
+                d=delimiter,
+            )
+            sys.path.append(appended_path)
+            break
 from musemorphose.dataloader import REMIFullSongTransformerDataset
+from musemorphose.utils import pickle_load
 if appended_path is not None:
-  sys.path.remove(appended_path)
+    sys.path.remove(appended_path)
 
 print("loading config...")
 config_path = "config/default.yaml"
