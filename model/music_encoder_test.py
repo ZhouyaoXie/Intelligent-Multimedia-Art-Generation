@@ -88,14 +88,15 @@ def test_dataloader():
     dloader_val = DataLoader(
         dset_val, batch_size=config['data']['batch_size'], shuffle=True, num_workers=8)
 
-    return dloader, dloader_val
+    return dset, dset_val, dloader, dloader_val
 
 
-def test_load_model():
+def test_load_model(dset):
     mconf = config['model']
     model = MusicEncoder(
         mconf['enc_n_layer'], mconf['enc_n_head'], mconf['enc_d_model'], mconf['enc_d_ff'],
-        mconf['d_latent'], mconf['d_embed'], vocab_size,
+        mconf['dec_n_layer'], mconf['dec_n_head'], mconf['dec_d_model'], mconf['dec_d_ff'],
+        mconf['d_latent'], mconf['d_embed'], dset.vocab_size,
         d_polyph_emb=mconf['d_polyph_emb'], d_rfreq_emb=mconf['d_rfreq_emb'],
         cond_mode=mconf['cond_mode']
     ).to(device)
@@ -147,11 +148,11 @@ if __name__ == "__main__":
 
     # test dataloader
     print("testing dataloader...")
-    dloader, dloader_val = test_dataloader()
+    dset, dset_val, dloader, dloader_val = test_dataloader()
 
     print("testing MusicEncoder...")
     # test loading MusicEncoder
-    model = test_load_model()
+    model = test_load_model(dset)
 
     # test forward
     print("testing music encoder forward...")
