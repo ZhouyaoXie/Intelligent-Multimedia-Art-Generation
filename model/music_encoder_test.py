@@ -19,7 +19,7 @@ for path in sys.path:
     ) in path:
         appended_path = '{path}{d}..'.format(
             path=path,
-            d=delimiter,
+            d=delimiter
         )
         break
 sys.path.append(appended_path)
