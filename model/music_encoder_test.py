@@ -133,11 +133,15 @@ def test_forward(dloader, num_to_test):
             padding_mask=batch_padding_mask
         )
         assert mu is not None and logvar is not None and dec_logits is not None
-        print("batch_idx: {batch_idx}\nmu: {mu}\nlogvar: {logvar}\ndec_logits: {logits}".format(
+        print("""batch_idx: {batch_idx}\n
+            mu: {mu}\n
+            logvar: {logvar}\n
+            dec_logits: {logits}
+        """.format(
             batch_idx=batch_idx,
-            mu=mu,
-            logvar=logvar,
-            logits=dec_logits
+            mu=mu[:,0],
+            logvar=logvar[:,0],
+            logits=dec_logits[:,:,0]
         ))
 
         test_count += 1
