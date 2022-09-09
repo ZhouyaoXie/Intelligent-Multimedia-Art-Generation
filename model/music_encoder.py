@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from music_encoder_utils import TokenEmbedding, PositionalEncoding, weights_init
+from music_encoder_utils import TokenEmbedding, PositionalEncoding, weights_init, generate_causal_mask
 
 """ Class for a transformer encoder 
 
@@ -44,11 +44,56 @@ class VAETransformerEncoder(nn.Module):
     return hidden_out, mu, logvar
 
 
+class VAETransformerDecoder(nn.Module):
+  def __init__(self, n_layer, n_head, d_model, d_ff, d_seg_emb, dropout=0.1, activation='relu', cond_mode='in-attn'):
+    super(VAETransformerDecoder, self).__init__()
+    self.n_layer = n_layer
+    self.n_head = n_head
+    self.d_model = d_model
+    self.d_ff = d_ff
+    self.d_seg_emb = d_seg_emb
+    self.dropout = dropout
+    self.activation = activation
+    self.cond_mode = cond_mode
+
+    if cond_mode == 'in-attn':
+      self.seg_emb_proj = nn.Linear(d_seg_emb, d_model, bias=False)
+    elif cond_mode == 'pre-attn':
+      self.seg_emb_proj = nn.Linear(d_seg_emb + d_model, d_model, bias=False)
+
+    self.decoder_layers = nn.ModuleList()
+    for i in range(n_layer):
+      self.decoder_layers.append(
+        nn.TransformerEncoderLayer(d_model, n_head, d_ff, dropout, activation)
+      )
+
+  def forward(self, x, seg_emb):
+    if not hasattr(self, 'cond_mode'):
+      self.cond_mode = 'in-attn'
+    attn_mask = generate_causal_mask(x.size(0)).to(x.device)
+    # print (attn_mask.size())
+
+    if self.cond_mode == 'in-attn':
+      seg_emb = self.seg_emb_proj(seg_emb)
+    elif self.cond_mode == 'pre-attn':
+      x = torch.cat([x, seg_emb], dim=-1)
+      x = self.seg_emb_proj(x)
+
+    out = x
+    for i in range(self.n_layer):
+      if self.cond_mode == 'in-attn':
+        out += seg_emb
+      out = self.decoder_layers[i](out, src_mask=attn_mask)
+
+    return out
+
+
 class MusicEncoder(nn.Module):
-  def __init__(self, 
-    enc_n_layer, enc_n_head, enc_d_model, enc_d_ff,
+  def __init__(self, enc_n_layer, enc_n_head, enc_d_model, enc_d_ff, 
+    dec_n_layer, dec_n_head, dec_d_model, dec_d_ff,
     d_vae_latent, d_embed, n_token,
     enc_dropout=0.1, enc_activation='relu',
+    dec_dropout=0.1, dec_activation='relu',
     d_rfreq_emb=32, d_polyph_emb=32,
     n_rfreq_cls=8, n_polyph_cls=8,
     is_training=True, use_attr_cls=True,
@@ -62,6 +107,13 @@ class MusicEncoder(nn.Module):
     self.enc_dropout = enc_dropout
     self.enc_activation = enc_activation
 
+    self.dec_n_layer = dec_n_layer
+    self.dec_n_head = dec_n_head
+    self.dec_d_model = dec_d_model
+    self.dec_d_ff = dec_d_ff
+    self.dec_dropout = dec_dropout
+    self.dec_activation = dec_activation  
+
     self.d_vae_latent = d_vae_latent
     self.n_token = n_token
     self.is_training = is_training
@@ -70,9 +122,24 @@ class MusicEncoder(nn.Module):
     self.token_emb = TokenEmbedding(n_token, d_embed, enc_d_model)
     self.d_embed = d_embed
     self.pe = PositionalEncoding(d_embed)
+    self.dec_out_proj = nn.Linear(dec_d_model, n_token)
     self.encoder = VAETransformerEncoder(
       enc_n_layer, enc_n_head, enc_d_model, enc_d_ff, d_vae_latent, enc_dropout, enc_activation
     )
+
+    self.use_attr_cls = use_attr_cls
+    if use_attr_cls:
+      self.decoder = VAETransformerDecoder(
+        dec_n_layer, dec_n_head, dec_d_model, dec_d_ff, d_vae_latent + d_polyph_emb + d_rfreq_emb,
+        dropout=dec_dropout, activation=dec_activation,
+        cond_mode=cond_mode
+      )
+    else:
+      self.decoder = VAETransformerDecoder(
+        dec_n_layer, dec_n_head, dec_d_model, dec_d_ff, d_vae_latent,
+        dropout=dec_dropout, activation=dec_activation,
+        cond_mode=cond_mode
+      )
 
     if use_attr_cls:
       self.d_rfreq_emb = d_rfreq_emb
