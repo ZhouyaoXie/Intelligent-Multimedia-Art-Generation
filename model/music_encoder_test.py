@@ -135,8 +135,9 @@ def test_forward(dloader, num_to_test):
         assert mu is not None and logvar is not None and dec_logits is not None
         print("batch_idx: {batch_idx}\nmu: {mu}\nlogvar: {logvar}\ndec_logits: {logits}".format(
             batch_idx=batch_idx,
+            mu=mu,
             logvar=logvar,
-            logits=dec_logits,
+            logits=dec_logits
         ))
 
         test_count += 1
