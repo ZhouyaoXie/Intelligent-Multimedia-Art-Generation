@@ -9,6 +9,12 @@ train | 574999 | 574999
 val | 80008 | 80008
 test | 63241 | 63241
 
+# Attribute Class
+
+rhythm classes:  `Counter({0: 153656, 7: 115504, 6: 50451, 5: 41513, 2: 32963, 1: 31840, 3: 26032, 4: 21825})`
+
+polyph classes: `Counter({0: 424411, 1: 16466, 2: 11606, 3: 10113, 4: 5512, 5: 3749, 6: 1552, 7: 375})`
+
 # Sample REMI events
 ```
 Event(name=Bar, time=None, value=None, text=1)
