@@ -2,7 +2,9 @@
 Capstone project for CMU MCDS program
 
 # Current Dataset info
+
 dataset split | # positive pairs | # negative pairs
+--- | --- | --- 
 train | 574999 | 574999
 val | 80008 | 80008
 test | 63241 | 63241
