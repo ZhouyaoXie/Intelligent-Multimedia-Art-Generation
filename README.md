@@ -14,4 +14,5 @@ Music generation with CLIP-like text-music alignment model and Transformer music
 
 ## Pre-processed Dataset Download
 pip install gdown
+
 gdown --folder https://drive.google.com/drive/folders/13UbMp_Q0PvnPsVNs7Aw4RWeiwT5cRatl?usp=sharing
