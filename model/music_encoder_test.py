@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 # import module from the same directory
-from music_encoder import MusicEncoder
+from music_transformer import MusicEncoder, MusicConfig
 
 print("importing module...")
 # import module from parent directory
@@ -33,25 +33,7 @@ config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
 global trained_steps
 
-device = config['training']['device']
-trained_steps = config['training']['trained_steps']
-lr_decay_steps = config['training']['lr_decay_steps']
-lr_warmup_steps = config['training']['lr_warmup_steps']
-no_kl_steps = config['training']['no_kl_steps']
-kl_cycle_steps = config['training']['kl_cycle_steps']
-kl_max_beta = config['training']['kl_max_beta']
-free_bit_lambda = config['training']['free_bit_lambda']
-max_lr, min_lr = config['training']['max_lr'], config['training']['min_lr']
-
-ckpt_dir = config['training']['ckpt_dir']
-params_dir = os.path.join(ckpt_dir, 'params/')
-optim_dir = os.path.join(ckpt_dir, 'optim/')
-pretrained_params_path = config['model']['pretrained_params_path']
-pretrained_optim_path = config['model']['pretrained_optim_path']
-ckpt_interval = config['training']['ckpt_interval']
-log_interval = config['training']['log_interval']
-val_interval = config['training']['val_interval']
-constant_kl = config['training']['constant_kl']
+config = MusicConfig()
 
 recons_loss_ema = 0.
 kl_loss_ema = 0.
@@ -99,9 +81,9 @@ def test_load_model(dset):
         mconf['d_latent'], mconf['d_embed'], dset.vocab_size,
         d_polyph_emb=mconf['d_polyph_emb'], d_rfreq_emb=mconf['d_rfreq_emb'],
         cond_mode=mconf['cond_mode']
-    ).to(device)
-    if pretrained_params_path:
-        model.load_state_dict(torch.load(pretrained_params_path), strict=False)
+    ).to(config.device)
+    if config.pretrained_params_path:
+        model.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
         print("save encoder weights...")
         torch.save(model.state_dict(), "music_encoder_weight.pt")
 
@@ -109,6 +91,7 @@ def test_load_model(dset):
 
 
 def test_forward(dloader, num_to_test):
+    device = config.device
     global trained_steps 
 
     test_count = 0
