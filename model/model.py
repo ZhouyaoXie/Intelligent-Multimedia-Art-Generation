@@ -1,8 +1,18 @@
+# TODOs:
+# 1) load_pretrained_weights
+#    for music encoder, the code:
+#         if config.pretrained_params_path:
+#         model.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
+#         print("save encoder weights...")
+#         torch.save(model.state_dict(), "music_encoder_weight.pt")
+# 2) initialize_params for BERT 
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
 import os, sys
+from typing import List, Optional, Tuple, Union
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -12,6 +22,8 @@ from music_transformer import VAETransformerEncoder, VAETransformerDecoder
 from music_encoder_utils import (
     TokenEmbedding, PositionalEncoding, weights_init, generate_causal_mask
 )
+from text_encoder import BertLayer
+from cross_attn import MusicClIPXLayer
 
 
 class MusicCLIP(nn.Module):
@@ -22,10 +34,14 @@ class MusicCLIP(nn.Module):
     ):
         super().__init__()
         self.music_config = music_config 
-        self.text_config = text_config
+        self.config = text_config
 
+        self.n_cross_layers = text_config.num_x_layers
         self._init_music_transformer_from_config(music_config)
         self._init_bert_from_config(text_config)
+        self.x_layers = nn.ModuleList(
+            [MusicClIPXLayer(text_config) for _ in range(self.n_cross_layers)]
+        )
 
         self.initialize_params()
 
@@ -76,30 +92,21 @@ class MusicCLIP(nn.Module):
 
         self.emb_dropout = nn.Dropout(self.enc_dropout)
 
-    
     def _init_bert_from_config(self, config):
-        # TODO: load BERT config and initialize text encoder 
-        pass
-
+        # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
+        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.gradient_checkpointing = False
 
     def initialize_params(self):
         # music
         weights_init(self)
 
         # text
-        nn.init.normal_(self.token_embedding.weight, std=0.02)
-        nn.init.normal_(self.positional_embedding, std=0.01)
-        proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
-        attn_std = self.transformer.width ** -0.5
-        fc_std = (2 * self.transformer.width) ** -0.5
-        for block in self.transformer.resblocks:
-            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+        # TODO: initialize BERT weights
 
-        if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
+    def load_pretrained_weights(self):
+        # TODO: load pretrained musemorphose & BERT encoder weights
+        pass 
 
     def encode_music(self, 
         enc_inp, 
@@ -152,12 +159,140 @@ class MusicCLIP(nn.Module):
 
         return mu, logvar, dec_logits
 
+    def encode_text(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        encoder_hidden_states: Optional[torch.FloatTensor] = None,
+        encoder_attention_mask: Optional[torch.FloatTensor] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = False,
+        output_hidden_states: Optional[bool] = False,
+        return_dict: Optional[bool] = True,
+    ):
+        all_hidden_states = () if output_hidden_states else None
+        all_self_attentions = () if output_attentions else None
+        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
 
-    def encode_text(self):
-        # TODO: BERT text encoder's forward method 
-        pass 
+        next_decoder_cache = () if use_cache else None
+        for i, layer_module in enumerate(self.layer):
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
 
+            layer_head_mask = head_mask[i] if head_mask is not None else None
+            past_key_value = past_key_values[i] if past_key_values is not None else None
 
+            if self.gradient_checkpointing and self.training:
+
+                if use_cache:
+                    # logger.warning(
+                    #     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                    # )
+                    use_cache = False
+
+                def create_custom_forward(module):
+                    def custom_forward(*inputs):
+                        return module(*inputs, past_key_value, output_attentions)
+
+                    return custom_forward
+
+                layer_outputs = torch.utils.checkpoint.checkpoint(
+                    create_custom_forward(layer_module),
+                    hidden_states,
+                    attention_mask,
+                    layer_head_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                )
+            else:
+                layer_outputs = layer_module(
+                    hidden_states,
+                    attention_mask,
+                    layer_head_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    past_key_value,
+                    output_attentions,
+                )
+
+            hidden_states = layer_outputs[0]
+            if use_cache:
+                next_decoder_cache += (layer_outputs[-1],)
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+                if self.config.add_cross_attention:
+                    all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)
+
+        if not return_dict:
+            return tuple(
+                v
+                for v in [
+                    hidden_states,
+                    next_decoder_cache,
+                    all_hidden_states,
+                    all_self_attentions,
+                    all_cross_attentions,
+                ]
+                if v is not None
+            )
+        # TODO: do we need this class or no?
+        # return BaseModelOutputWithPastAndCrossAttentions(
+        #     last_hidden_state=hidden_states,
+        #     past_key_values=next_decoder_cache,
+        #     hidden_states=all_hidden_states,
+        #     attentions=all_self_attentions,
+        #     cross_attentions=all_cross_attentions,
+        # )
+        return 
+
+    def forward(
+        self,
+        lang_feats,
+        lang_attention_mask,
+        enc_inp, 
+        dec_inp, 
+        dec_inp_bar_pos, 
+        rfreq_cls=None, 
+        polyph_cls=None, 
+        padding_mask=None,
+        music_attention_mask = None,
+    ):
+        """ Adapted from https://github.com/airsplay/lxmert/blob/master/src/lxrt/modeling.py#L546
+        
+        """
+        # Run music embedding layer
+        # Note: Word embedding layer was executed outside this module.
+        #       Keep this design to allow loading BERT weights.
+        music_feats = self.encode_music(
+            enc_inp, 
+            dec_inp, 
+            dec_inp_bar_pos, 
+            rfreq_cls, 
+            polyph_cls,
+            padding_mask
+        )
+
+        # Run language layers
+        for layer_module in self.layer:
+            lang_feats = layer_module(lang_feats, lang_attention_mask)
+
+        # Run relational layers
+        # for layer_module in self.r_layers:
+        #     visn_feats = layer_module(visn_feats, visn_attention_mask)
+
+        # Run cross-modality layers
+        for layer_module in self.x_layers:
+            lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
+                                                  music_feats, music_attention_mask)
+
+        return lang_feats, music_feats
+ 
+ 
     # below are methods for music decoder generation 
     def reparameterize(self, mu, logvar, use_sampling=True, sampling_var=1.):
         std = torch.exp(0.5 * logvar).to(mu.device)
