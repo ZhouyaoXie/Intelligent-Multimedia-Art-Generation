@@ -2,6 +2,7 @@
 Capstone project for CMU MCDS program
 
 # Current Dataset info
+number of unique recordings used: 34241
 
 dataset split | # positive pairs | # negative pairs
 --- | --- | --- 
