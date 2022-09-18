@@ -15,6 +15,20 @@ rhythm classes:  `Counter({0: 153656, 7: 115504, 6: 50451, 5: 41513, 2: 32963, 1
 
 polyph classes: `Counter({0: 424411, 1: 16466, 2: 11606, 3: 10113, 4: 5512, 5: 3749, 6: 1552, 7: 375})`
 
+# REMI Vocabulary
+ ```
+ {
+   'Bar': 1,
+   'Beat': 16,
+   'Chord': 133,
+   'EOS': 1,
+   'Note_Duration': 17,
+   'Note_Pitch': 126,
+   'Note_Velocity': 44,
+   'Tempo': 65
+ }
+ ```
+ 
 # Sample REMI events
 ```
 Event(name=Bar, time=None, value=None, text=1)
