@@ -2,7 +2,11 @@
 Capstone project for CMU MCDS program
 
 # Current Dataset info
-number of unique recordings used: 34241
+Number of unique recordings: 9409
+
+Number of music chunks (splitted every 16 bar): 34241
+
+Average number of bars per chunks: 13.84
 
 dataset split | # positive pairs | # negative pairs
 --- | --- | --- 
