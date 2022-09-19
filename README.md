@@ -49,9 +49,8 @@ Number of events between two consecutive bars (range) | frequency (times appeare
 
 # Attribute Class
 
-rhythm classes:  `Counter({0: 153656, 7: 115504, 6: 50451, 5: 41513, 2: 32963, 1: 31840, 3: 26032, 4: 21825})`
-
-polyph classes: `Counter({0: 424411, 1: 16466, 2: 11606, 3: 10113, 4: 5512, 5: 3749, 6: 1552, 7: 375})`
+rhythmic intensity bounds: [0.0, 0.1875, 0.3125, 0.4375, 0.5, 0.6875, 0.9375, 1.0]
+polyphonicity bounds: [0.0, 0.5, 0.75, 0.9375, 1.0, 1.75, 2.8125, 18.8125]
 
 # REMI Vocabulary
  ```
