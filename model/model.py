@@ -292,7 +292,7 @@ class MusicCLIP(nn.Module):
 
         return lang_feats, music_feats
  
- 
+
     # below are methods for music decoder generation 
     def reparameterize(self, mu, logvar, use_sampling=True, sampling_var=1.):
         std = torch.exp(0.5 * logvar).to(mu.device)
@@ -331,23 +331,3 @@ class MusicCLIP(nn.Module):
             out = out[-1, ...]
 
         return out
-
-
-    def compute_loss(self, mu, logvar, beta, fb_lambda, dec_logits, dec_tgt):
-        recons_loss = F.cross_entropy(
-        dec_logits.view(-1, dec_logits.size(-1)), dec_tgt.contiguous().view(-1), 
-        ignore_index=self.n_token - 1, reduction='mean'
-        ).float()
-
-        kl_raw = -0.5 * (1 + logvar - mu ** 2 - logvar.exp()).mean(dim=0)
-        kl_before_free_bits = kl_raw.mean()
-        kl_after_free_bits = kl_raw.clamp(min=fb_lambda)
-        kldiv_loss = kl_after_free_bits.mean()
-
-        return {
-            'beta': beta,
-            'total_loss': recons_loss + beta * kldiv_loss,
-            'kldiv_loss': kldiv_loss,
-            'kldiv_raw': kl_before_free_bits,
-            'recons_loss': recons_loss
-        }
