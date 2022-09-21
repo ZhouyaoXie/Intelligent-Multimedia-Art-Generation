@@ -21,76 +21,81 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ContrastiveLoss(nn.Module):
-    def __init__(self, device, batch_size, temperature, alpha = 0.5):
+    def __init__(self, batch_size, temperature = 1, alpha = 0.5):
         super().__init__()
         self.batch_size = batch_size
         self.temperature = temperature
-        self.alpha = alpha
-        self.device = device
-        self.softmax = nn.Softmax(dim=-1)
-        self.criterion = nn.CrossEntropyLoss(reduction="sum")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def softXEnt(self, target, logits):
-        """
-        From the pytorch discussion Forum:
-        https://discuss.pytorch.org/t/soft-cross-entropy-loss-tf-has-it-does-pytorch-have-it/69501 
-        """
-        logprobs = F.log_softmax(logits, dim = 1)
-        loss = -(target * logprobs).sum() / logits.shape[0]
-        # print('logprobs ', logprobs)
-        # print('multiply:', target * logprobs)
-        # print('sum:', -(target * logprobs).sum())
-        return loss
+    def forward(self, x1, y1, y2=None, norm = True):
+        """ Computes contrastive loss
+        https://github.com/RElbers/info-nce-pytorch/blob/main/info_nce/__init__.py
 
-    def forward(self, x1, x2, flag, norm = True, include_negatives = True):
-        """ Compute contrastive loss between two embeddings given flag +1/-1
-        From https://github.com/edreisMD/ConVIRT-pytorch
+        Params:
+            x1: input embedding, shape [bs, embed_dim]
+            y1: positive pair embedding, shape [bs, embed_dim]
+            y2: [Optional] negative pair embedding, shape [bs, embed_dim]
+                if negative pair is None, then use all other positive pairs as negative
+            norm: normalize input embeddings or not, default to be True
 
-        Args:
-            x1, x2: two embedding tensors with the same shape, [bs, embed_dim]
-            flag: 1 represents positive pairs, -1 represent negative pairs, size [bs]
-            norm: boolean, whether to normalize input embeddings or not
         Returns:
-            if flag is positive, return a small value if x1 and x2 are similar 
-                and a large value if they are far away;
-            if flag is negative, do the opposite
+            Contrastive loss
         """
-        # Get (normalized) hidden1 and hidden2.
         if norm:
-            x1 = F.normalize(x1, p=2, dim=1)
-            x2 = F.normalize(x2, p=2, dim=1)
-            
-        batch_size = x1.shape[0]
-
-        labels = F.one_hot(torch.arange(start=0, end=batch_size, dtype=torch.int64), num_classes=batch_size).float()
-        labels = labels.to(self.device)
-        mask = torch.where(flag == 1, 1, -1)
+            x1, y1, y2 = self.normalize(x1, y1, y2)
         
-        logits_ab = torch.matmul(x1, torch.transpose(x2, 0, 1)) / self.temperature
-        logits_ba = torch.matmul(x2, torch.transpose(x1, 0, 1)) / self.temperature
+        if y2 is not None:
+            # Explicit negative keys
 
-        print(logits_ab)
-        print('soft xent:', self.softXEnt(labels, logits_ab))
+            # Cosine between positive pairs
+            positive_logit = torch.sum(x1 * y1, dim=1, keepdim=True)
 
-        loss_a = self.softXEnt(labels, logits_ab)
-        loss_b = self.softXEnt(labels, logits_ba)
+            # Cosine between all x1-negative combinations
+            negative_logits = x1 @ self.transpose(y2)
 
-        return self.alpha * loss_a + (1 - self.alpha) * loss_b
+            # First index in last dimension are the positive samples
+            logits = torch.cat([positive_logit, negative_logits], dim=1)
+            labels = torch.zeros(len(logits), dtype=torch.long, device=x1.device)
+        else:
+            # Negative keys are implicitly off-diagonal positive keys.
+
+            # Cosine between all combinations
+            logits = x1 @ transpose(y1)
+
+            # Positive keys are the entries on the diagonal
+            labels = torch.arange(len(x1), device=x1.device)
+
+        return F.cross_entropy(logits / temperature, labels, reduction=reduction)
+
+    def transpose(self, x):
+        return x.transpose(-2, -1)
+
+    def normalize(self, *xs):
+        return [None if x is None else F.normalize(x, dim=-1) for x in xs]
+
 
 # test 
 if __name__ == "__main__":
-    loss = ContrastiveLoss("cpu", 2, 1)
+    loss = ContrastiveLoss(batch_size = 3)
 
     x1 = torch.Tensor([[0, 0, 0.8, 0.7, 0],
+                       [0.7, 0.9, 0, 0, 0],
                        [0.7, 0.9, 0, 0, 0]])
-    x2 = torch.Tensor([[0.9, 0.8, 0.1, 0, 0.9],
+    y1 = torch.Tensor([[0.1, 0.2, 1, 1, 0.1],
+                        [0.8, 0.7, 0, 0, 0],
                         [0.8, 0.7, 0, 0, 0]])
-    flag = torch.Tensor([-1, 1])
-    print('this loss should be small: ', loss(x1, x2, flag))
+    y2 = torch.Tensor([[0.9, 0.8, 0.1, 0, 0.9],
+                        [0.1, 0.1, 0.9, 0.8, 0.9],
+                        [0.1, 0, 0.9, 1, 1],])
+    print('this loss should be small: ', loss(x1, y1, y2))
 
-    # x1 = torch.Tensor([[0.1, 0.2, 0.8, 0.7, 0.9],
-    #                    [0.7, 0.9, 0.2, 0.3, 0.1]])
-    # x2 = torch.Tensor([[0.9, 0.8, 0.3, 0.2, 0.3],
-    #                     [0.8, 0.7, 0.3, 0.1, 0.0]])
-    # flag = torch.Tensor([1, -1])
-    # print('this loss should be large: ', loss(x1, x2, flag))
+    x1 = torch.Tensor([[0, 0, 0.8, 0.7, 0],
+                       [0.7, 0.9, 0, 0, 0],
+                       [0.7, 0.9, 0, 0, 0]])
+    y1 = torch.Tensor([[0.9, 1, 0, 0.1, 1],
+                        [0.1, 0.2, 0.5, 0.6, 0.5],
+                        [0, 0.1, 0.9, 0.8, 0.7]])
+    y2 = torch.Tensor([[0.1, 0.2, 0.9, 0.9, 0.3],
+                        [0.6, 0.7, 0.2, 0.1, 0.2],
+                        [0.8, 0.7, 0.2, 0.1, 0.2]])
+    print('this loss should be big: ', loss(x1, y1, y2))
