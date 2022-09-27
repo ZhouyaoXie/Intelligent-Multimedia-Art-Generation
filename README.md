@@ -4,15 +4,15 @@ Capstone project for CMU MCDS program
 # Current Dataset info
 Number of unique recordings: 9409
 
-Number of music chunks (splitted every 16 bar): 34241
+Number of music chunks (splitted every 16 bar): 34241 - 2255 (files that have no events between at least one of the two consecutive bars) = 31986
 
-Average number of bars per chunks: 13.84
+Average number of bars per chunks (among 34241 files): 13.84
 
 dataset split | # positive pairs | # negative pairs
 --- | --- | --- 
-train | 574999 | 574999
-val | 80008 | 80008
-test | 63241 | 63241
+train | 544785 | 544785
+val | 54914 | 54914
+test | 69776 | 69776
 
 # Bar Position
 
@@ -49,8 +49,11 @@ Number of events between two consecutive bars (range) | frequency (times appeare
 
 # Attribute Class
 
-rhythmic intensity bounds: [0.0, 0.1875, 0.3125, 0.4375, 0.5, 0.6875, 0.9375, 1.0]
-polyphonicity bounds: [0.0, 0.5, 0.75, 0.9375, 1.0, 1.75, 2.8125, 18.8125]
+rhythmic intensity bounds: [0.0, 0.1875, 0.3125, 0.4375, 0.5625, 0.6875, 0.9375, 1.0]
+polyphonicity bounds: [0.0, 0.5, 0.75, 0.9375, 1.25, 2.0, 3.0, 14.0]
+
+[rhythm classes] Counter({0: 2917246, 4: 2615224, 1: 2537060, 2: 2413000, 7: 2188198, 3: 2018130, 5: 2005684, 6: 1769110})
+[polyph classes] Counter({0: 5395600, 2: 2086768, 6: 2081836, 1: 1977004, 3: 1824338, 4: 1772322, 5: 1759396, 7: 1566388})
 
 # REMI Vocabulary
  ```
