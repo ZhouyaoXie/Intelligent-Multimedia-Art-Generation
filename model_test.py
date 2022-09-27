@@ -124,4 +124,4 @@ if __name__ == "__main__":
     config.n_token = 333
 
     model = MusicCLIP(config)
-    print(model.state_dict)
+    print(model.state_dict().keys())
