@@ -4,17 +4,15 @@ import json
 import logging
 import math
 import os
-import shutil
-import tarfile
-import tempfile
 import sys
 from io import open
+import re
+import numpy as np
+import tensorflow as tf
 
 import torch
 from torch import nn
-from torch.nn import CrossEntropyLoss, SmoothL1Loss
 
-from .utils import cached_path
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +32,14 @@ TF_WEIGHTS_NAME = 'model.ckpt'
 def load_tf_weights_in_bert(model, tf_checkpoint_path):
 	""" Load tf checkpoints in a pytorch model
 	"""
-	try:
-		import re
-		import numpy as np
-		import tensorflow as tf
-	except Importtokenization:
-		print("Loading a TensorFlow models in PyTorch, requires TensorFlow to be installed. Please see "
-				"https://www.tensorflow.org/install/ for installation instructions.")
-		raise
+	# try:
+	# 	import re
+	# 	import numpy as np
+	# 	import tensorflow as tf
+	# except Importtokenization:
+	# 	print("Loading a TensorFlow models in PyTorch, requires TensorFlow to be installed. Please see "
+	# 			"https://www.tensorflow.org/install/ for installation instructions.")
+	# 	raise
 	tf_path = os.path.abspath(tf_checkpoint_path)
 	print("Converting TensorFlow checkpoint from {}".format(tf_path))
 	# Load weights from TF model

@@ -1,19 +1,6 @@
-import copy
-import json
-import logging
-import math
-import os
-import shutil
-import tarfile
-import tempfile
-import sys
-from io import open
 
-import torch
 from torch import nn
-from torch.nn import CrossEntropyLoss, SmoothL1Loss
 
-from .utils import cached_path
 from .text_encoder import *
 
 class MusicClIPXLayer(nn.Module):
