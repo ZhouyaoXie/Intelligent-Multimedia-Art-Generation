@@ -11,3 +11,4 @@ numpy
 matplotlib
 pylab-sdk
 requests
+transformers
