@@ -1,15 +1,15 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
-from music_encoder_utils import TokenEmbedding, PositionalEncoding, weights_init, generate_causal_mask
+from .music_encoder_utils import generate_causal_mask
 import yaml 
 import os 
 
 
 """ Class for reading music transformer config from yaml file """
 class MusicConfig:
-    def __init__(self):
-        config_path = "config/default.yaml"
+    def __init__(self, config_path = None):
+        if config_path is None:
+            config_path = "config/default.yaml"
         config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
         # training parameters
@@ -34,12 +34,17 @@ class MusicConfig:
         self.d_polyph_emb = mconf['d_polyph_emb']
         self.d_rfreq_emb = mconf['d_rfreq_emb']
         self.cond_mode = mconf['cond_mode']
+        self.n_rfreq_cls = mconf.get('n_rfreq_cls', 8)
+        self.n_polyph_cls = mconf.get('n_polyph_cls', 8)
 
         # music encoder 
         self.enc_n_layer = mconf['enc_n_layer']
         self.enc_n_head = mconf['enc_n_head']
         self.enc_d_model = mconf['enc_d_model']
         self.enc_d_ff = mconf['enc_d_ff']
+        self.enc_dropout = mconf.get('enc_dropout', 0.1)
+        self.enc_activation = mconf.get('enc_activation', 'relu')
+
 
         # music decoder 
         self.dec_n_layer = mconf['dec_n_layer']
@@ -48,7 +53,10 @@ class MusicConfig:
         self.dec_d_ff = mconf['dec_d_ff']
         self.d_latent = mconf['d_latent']
         self.d_embed = mconf['d_embed']
-        
+        self.dec_dropout = mconf.get('dec_dropout', 0.1)
+        self.dec_activation = mconf.get('dec_activation', 'relu')
+
+        # training
         self.ckpt_interval = config['training']['ckpt_interval']
         self.log_interval = config['training']['log_interval']
         self.val_interval = config['training']['val_interval']

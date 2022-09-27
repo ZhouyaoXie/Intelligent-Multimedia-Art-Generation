@@ -2,7 +2,6 @@ import math
 import torch
 
 from torch import nn
-import torch.nn.functional as F
 
 def generate_causal_mask(seq_len):
     mask = (torch.triu(torch.ones(seq_len, seq_len)) == 1).transpose(0, 1)

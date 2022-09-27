@@ -1,52 +1,42 @@
-# TODOs:
-# 1) load_pretrained_weights
-#    for music encoder, the code:
-#         if config.pretrained_params_path:
-#         model.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
-#         print("save encoder weights...")
-#         torch.save(model.state_dict(), "music_encoder_weight.pt")
-# 2) initialize_params for BERT 
-
-import numpy as np
 import torch
-import torch.nn.functional as F
 from torch import nn
 import os, sys
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from clip.model import Transformer, LayerNorm
-from music_transformer import VAETransformerEncoder, VAETransformerDecoder 
-from music_encoder_utils import (
-    TokenEmbedding, PositionalEncoding, weights_init, generate_causal_mask
+from .music_transformer import VAETransformerEncoder, VAETransformerDecoder 
+from .music_encoder_utils import (
+    TokenEmbedding, PositionalEncoding, weights_init
 )
-from text_encoder import BertLayer
-from cross_attn import MusicClIPXLayer
+from .text_encoder import BertLayer
+from .cross_attn import MusicClIPXLayer
 
 
 class MusicCLIP(nn.Module):
     def __init__(
         self,
         music_config,
-        text_config
+        text_config = None,
     ):
         super().__init__()
         self.music_config = music_config 
         self.config = text_config
 
-        self.n_cross_layers = text_config.num_x_layers
+        if text_config is not None:
+            self.n_cross_layers = text_config.num_x_layers
         self._init_music_transformer_from_config(music_config)
-        self._init_bert_from_config(text_config)
-        self.x_layers = nn.ModuleList(
-            [MusicClIPXLayer(text_config) for _ in range(self.n_cross_layers)]
-        )
 
-        self.initialize_params()
+        # self._init_bert_from_config(text_config)
+        # self.x_layers = nn.ModuleList(
+        #     [MusicClIPXLayer(text_config) for _ in range(self.n_cross_layers)]
+        # )
+
+        # self.initialize_params()
 
 
-    def _init_music_transformer_from_config(self, config):
+    def _init_music_transformer_from_config(self, config, use_attr_cls = True):
         self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
         self.pe = PositionalEncoding(config.d_embed)
         self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
@@ -55,18 +45,18 @@ class MusicCLIP(nn.Module):
             config.enc_n_head, 
             config.enc_d_model, 
             config.enc_d_ff, 
-            config.d_vae_latent, 
+            config.d_latent, 
             config.enc_dropout, 
             config.enc_activation
         )
 
-        if config.use_attr_cls:
+        if use_attr_cls:
             self.decoder = VAETransformerDecoder(
                 config.dec_n_layer, 
                 config.dec_n_head, 
                 config.dec_d_model, 
                 config.dec_d_ff, 
-                config.d_vae_latent + config.d_polyph_emb + config.d_rfreq_emb,
+                config.d_latent + config.d_polyph_emb + config.d_rfreq_emb,
                 dropout = config.dec_dropout, 
                 activation = config.dec_activation,
                 cond_mode = config.cond_mode
@@ -77,36 +67,31 @@ class MusicCLIP(nn.Module):
                 config.dec_n_head, 
                 config.dec_d_model, 
                 config.dec_d_ff, 
-                config.d_vae_latent,
+                config.d_latent,
                 dropout = config.dec_dropout, 
                 activation = config.dec_activation,
                 cond_mode = config.cond_mode
             )
 
-        if config.use_attr_cls:
+        if use_attr_cls:
             self.rfreq_attr_emb = TokenEmbedding(config.n_rfreq_cls, config.d_rfreq_emb, config.d_rfreq_emb)
             self.polyph_attr_emb = TokenEmbedding(config.n_polyph_cls, config.d_polyph_emb, config.d_polyph_emb)
         else:
             self.rfreq_attr_emb = None
             self.polyph_attr_emb = None
 
-        self.emb_dropout = nn.Dropout(self.enc_dropout)
+        self.emb_dropout = nn.Dropout(config.enc_dropout)
+
+        if config.pretrained_params_path is not None:
+            self.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
+        else:
+            weights_init(self)
 
     def _init_bert_from_config(self, config):
         # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def initialize_params(self):
-        # music
-        weights_init(self)
-
-        # text
-        # TODO: initialize BERT weights
-
-    def load_pretrained_weights(self):
-        # TODO: load pretrained musemorphose & BERT encoder weights
-        pass 
 
     def encode_music(self, 
         enc_inp, 
@@ -114,7 +99,8 @@ class MusicCLIP(nn.Module):
         dec_inp_bar_pos, 
         rfreq_cls=None, 
         polyph_cls=None, 
-        padding_mask=None
+        padding_mask=None,
+        use_attr_cls=True,
     ):
         # [shape of enc_inp] (seqlen_per_bar, bsize, n_bars_per_sample)
         enc_bt_size, enc_n_bars = enc_inp.size(1), enc_inp.size(2)
@@ -147,7 +133,7 @@ class MusicCLIP(nn.Module):
             for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
                 dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
 
-        if rfreq_cls is not None and polyph_cls is not None and self.use_attr_cls:
+        if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
             dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
             dec_polyph_emb = self.polyph_attr_emb(polyph_cls)
             dec_seg_emb_cat = torch.cat([dec_seg_emb, dec_rfreq_emb, dec_polyph_emb], dim=-1)
