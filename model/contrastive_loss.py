@@ -21,14 +21,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ContrastiveLoss(nn.Module):
-    def __init__(self, batch_size, temperature = 1, alpha = 0.5):
+    def __init__(self, batch_size, temperature = 1, alpha = 0.5, reduction = 'mean'):
         super().__init__()
         self.batch_size = batch_size
         self.temperature = temperature
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.reduction = reduction 
 
     def forward(self, x1, y1, y2=None, norm = True):
-        """ Computes contrastive loss
+        """ Computes contrastive loss as the cross entropy over cosine similarities between
+        paired inputs, with positive pairs having label 1 and negative pairs label 0
         https://github.com/RElbers/info-nce-pytorch/blob/main/info_nce/__init__.py
 
         Params:
@@ -60,12 +62,12 @@ class ContrastiveLoss(nn.Module):
             # Negative keys are implicitly off-diagonal positive keys.
 
             # Cosine between all combinations
-            logits = x1 @ transpose(y1)
+            logits = x1 @ torch.transpose(y1)
 
             # Positive keys are the entries on the diagonal
             labels = torch.arange(len(x1), device=x1.device)
 
-        return F.cross_entropy(logits / temperature, labels, reduction=reduction)
+        return F.cross_entropy(logits / self.temperature, labels, reduction=self.reduction)
 
     def transpose(self, x):
         return x.transpose(-2, -1)
