@@ -12,7 +12,7 @@ Music generation with CLIP-like text-music alignment model and Transformer music
 | Midterm Presentation | v1      | [Google Slide](https://docs.google.com/presentation/d/1eq4siGh2KAKda78kX-bInrw0dw_KqGriUX0oTFDo8-Y/edit?usp=sharing)                                |
 | Fall Plan | v2      | [Google Doc](https://docs.google.com/document/d/1_a0rG6gzOxfX6jLB3J7rNbv8pEsRPXesW-zgkbh5gzQ/edit?usp=sharing); [Google Slide](https://docs.google.com/presentation/d/1f4tjkyhnWLSoIbj6C0oC1TAeV6_OxcBh/edit?usp=sharing&ouid=100645612073317945557&rtpof=true&sd=true)  |
 
-## Pre-processed Dataset Download
+## Pre-processed Train/Eval/Test Matched Tuples Download
 pip install gdown
 
 gdown --folder https://drive.google.com/drive/folders/13UbMp_Q0PvnPsVNs7Aw4RWeiwT5cRatl?usp=sharing
