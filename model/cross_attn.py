@@ -58,3 +58,12 @@ class MusicClIPXLayer(nn.Module):
 			lang_att_output, visn_att_output)
 
 		return lang_output, visn_output
+
+
+if __name__ == "__main__":
+
+    # test cross attention with text and text
+    data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+    dset, dset_val, dloader, dloader_val = test_dataloader(data_config)
+    model = MusicClIPXLayer(config)
+    print(model.state_dict().keys())
