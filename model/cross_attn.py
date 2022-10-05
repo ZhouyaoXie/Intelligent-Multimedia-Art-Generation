@@ -65,7 +65,7 @@ class XLayer_encoder(nn.Module):
 
         self.num_x_layers = config.x_layers
         self.x_layers = nn.ModuleList(
-            [LXRTXLayer(config) for _ in range(self.num_x_layers)]
+            [MusicClIPXLayer(config) for _ in range(self.num_x_layers)]
         )
 
     def forward(self, lang_feats, lang_attention_mask,
