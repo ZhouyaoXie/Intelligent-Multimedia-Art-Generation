@@ -301,7 +301,9 @@ class MusicCLIP(BertPreTrainedModel):
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
 
-        return lang_feats, music_feats
+
+        pooled_output = self.pooler(lang_feats)
+        return lang_feats, music_feats , pooled_output
  
 
     # below are methods for music decoder generation 

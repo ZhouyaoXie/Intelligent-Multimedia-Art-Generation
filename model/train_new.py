@@ -87,7 +87,7 @@ def _train():
 		for step, (x,y) in enumerate(train_loader):
 		    x = x.to(device)
 		    y = y.to(device)
-		    hid_rep, d, c = model(x)
+		    lang_feats, vision_feats, pooled_output = model(x)
 		    loss = autoencoder_loss(d,x)
 		    optimizer.zero_grad()
 		    loss.backward()
