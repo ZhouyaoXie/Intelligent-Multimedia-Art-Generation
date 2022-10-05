@@ -409,3 +409,233 @@ class BertLayer(nn.Module):
 		intermediate_output = self.intermediate(attention_output)
 		layer_output = self.output(intermediate_output, attention_output)
 		return layer_output
+
+
+
+
+class BertPooler(nn.Module):
+    def __init__(self, config):
+        super(BertPooler, self).__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
+
+    def forward(self, hidden_states):
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        first_token_tensor = hidden_states[:, 0]
+        pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
+
+
+class BertPredictionHeadTransform(nn.Module):
+    def __init__(self, config):
+        super(BertPredictionHeadTransform, self).__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        if isinstance(config.hidden_act, str) or (sys.version_info[0] == 2 and isinstance(config.hidden_act, unicode)):
+            self.transform_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.transform_act_fn = config.hidden_act
+        self.LayerNorm = BertLayerNorm(config.hidden_size, eps=1e-12)
+
+    def forward(self, hidden_states):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.transform_act_fn(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states)
+        return hidden_states
+
+
+class BertLMPredictionHead(nn.Module):
+    def __init__(self, config, bert_model_embedding_weights):
+        super(BertLMPredictionHead, self).__init__()
+        self.transform = BertPredictionHeadTransform(config)
+
+        # The output weights are the same as the input embeddings, but there is
+        # an output-only bias for each token.
+        self.decoder = nn.Linear(bert_model_embedding_weights.size(1),
+                                 bert_model_embedding_weights.size(0),
+                                 bias=False)
+        self.decoder.weight = bert_model_embedding_weights
+        self.bias = nn.Parameter(torch.zeros(bert_model_embedding_weights.size(0)))
+
+    def forward(self, hidden_states):
+        hidden_states = self.transform(hidden_states)
+        hidden_states = self.decoder(hidden_states) + self.bias
+        return hidden_states
+
+
+
+
+class BertPreTrainingHeads(nn.Module):
+    def __init__(self, config, bert_model_embedding_weights):
+        super(BertPreTrainingHeads, self).__init__()
+        self.predictions = BertLMPredictionHead(config, bert_model_embedding_weights)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
+
+    def forward(self, sequence_output, pooled_output):
+        prediction_scores = self.predictions(sequence_output)
+        seq_relationship_score = self.seq_relationship(pooled_output)
+        return prediction_scores, seq_relationship_score
+
+
+class BertPreTrainedModel(nn.Module):
+    """ An abstract class to handle weights initialization and
+        a simple interface for dowloading and loading pretrained models.
+    """
+    def __init__(self, config, *inputs, **kwargs):
+        super(BertPreTrainedModel, self).__init__()
+        if not isinstance(config, BertConfig):
+            raise ValueError(
+                "Parameter config in `{}(config)` should be an instance of class `BertConfig`. "
+                "To create a model from a Google pretrained model use "
+                "`model = {}.from_pretrained(PRETRAINED_MODEL_NAME)`".format(
+                    self.__class__.__name__, self.__class__.__name__
+                ))
+        self.config = config
+
+    def init_bert_weights(self, module):
+        """ Initialize the weights.
+        """
+        if isinstance(module, (nn.Linear, nn.Embedding)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, BertLayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, state_dict=None, cache_dir=None,
+                        from_tf=False, *inputs, **kwargs):
+        """
+        Instantiate a BertPreTrainedModel from a pre-trained model file or a pytorch state dict.
+        Download and cache the pre-trained model file if needed.
+
+        Params:
+            pretrained_model_name_or_path: either:
+                - a str with the name of a pre-trained model to load selected in the list of:
+                    . `bert-base-uncased`
+                    . `bert-large-uncased`
+                    . `bert-base-cased`
+                    . `bert-large-cased`
+                    . `bert-base-multilingual-uncased`
+                    . `bert-base-multilingual-cased`
+                    . `bert-base-chinese`
+                - a path or url to a pretrained model archive containing:
+                    . `bert_config.json` a configuration file for the model
+                    . `pytorch_model.bin` a PyTorch dump of a BertForPreTraining instance
+                - a path or url to a pretrained model archive containing:
+                    . `bert_config.json` a configuration file for the model
+                    . `model.chkpt` a TensorFlow checkpoint
+            from_tf: should we load the weights from a locally saved TensorFlow checkpoint
+            cache_dir: an optional path to a folder in which the pre-trained models will be cached.
+            state_dict: an optional state dictionnary (collections.OrderedDict object) to use instead of Google pre-trained models
+            *inputs, **kwargs: additional input for the specific Bert class
+                (ex: num_labels for BertForSequenceClassification)
+        """
+        if pretrained_model_name_or_path in PRETRAINED_MODEL_ARCHIVE_MAP:
+            archive_file = PRETRAINED_MODEL_ARCHIVE_MAP[pretrained_model_name_or_path]
+        else:
+            archive_file = pretrained_model_name_or_path
+        # redirect to the cache, if necessary
+        try:
+            resolved_archive_file = cached_path(archive_file, cache_dir=cache_dir)
+        except EnvironmentError:
+            if pretrained_model_name_or_path == 'bert-base-uncased':
+                try:
+                    print("The BERT-weight-downloading query to AWS was time-out;" 
+                          "trying to download from UNC servers")
+                    archive_file = "https://nlp.cs.unc.edu/data/bert/bert-base-uncased.tar.gz"
+                    resolved_archive_file = cached_path(archive_file, cache_dir=cache_dir)
+                except EnvironmentError:
+                    print("The weight-downloading still crashed with link: %s, "
+                          "please check your network connection" % archive_file)
+                    return None
+            else:
+                logger.error(
+                        "Model name '{}' was not found in model name list ({}). "
+                        "We assumed '{}' was a path or url but couldn't find any file "
+                        "associated to this path or url.".format(
+                            pretrained_model_name_or_path,
+                            ', '.join(PRETRAINED_MODEL_ARCHIVE_MAP.keys()),
+                            archive_file))
+        if resolved_archive_file == archive_file:
+            logger.info("loading archive file {}".format(archive_file))
+        else:
+            logger.info("loading archive file {} from cache at {}".format(
+                archive_file, resolved_archive_file))
+        tempdir = None
+        if os.path.isdir(resolved_archive_file) or from_tf:
+            serialization_dir = resolved_archive_file
+        else:
+            # Extract archive to temp dir
+            tempdir = tempfile.mkdtemp()
+            logger.info("extracting archive file {} to temp dir {}".format(
+                resolved_archive_file, tempdir))
+            with tarfile.open(resolved_archive_file, 'r:gz') as archive:
+                archive.extractall(tempdir)
+            serialization_dir = tempdir
+        # Load config
+        config_file = os.path.join(serialization_dir, CONFIG_NAME)
+        config = BertConfig.from_json_file(config_file)
+        logger.info("Model config {}".format(config))
+        # Instantiate model.
+        model = cls(config, *inputs, **kwargs)
+        if state_dict is None and not from_tf:
+            weights_path = os.path.join(serialization_dir, WEIGHTS_NAME)
+            state_dict = torch.load(weights_path, map_location='cpu' if not torch.cuda.is_available() else None)
+        if tempdir:
+            # Clean up temp dir
+            shutil.rmtree(tempdir)
+        if from_tf:
+            # Directly load from a TensorFlow checkpoint
+            weights_path = os.path.join(serialization_dir, TF_WEIGHTS_NAME)
+            return load_tf_weights_in_bert(model, weights_path)
+        # Load from a PyTorch state_dict
+        old_keys = []
+        new_keys = []
+        for key in state_dict.keys():
+            new_key = None
+            if 'gamma' in key:
+                new_key = key.replace('gamma', 'weight')
+            if 'beta' in key:
+                new_key = key.replace('beta', 'bias')
+            if new_key:
+                old_keys.append(key)
+                new_keys.append(new_key)
+        for old_key, new_key in zip(old_keys, new_keys):
+            state_dict[new_key] = state_dict.pop(old_key)
+
+        missing_keys = []
+        unexpected_keys = []
+        error_msgs = []
+        # copy state_dict so _load_from_state_dict can modify it
+        metadata = getattr(state_dict, '_metadata', None)
+        state_dict = state_dict.copy()
+        if metadata is not None:
+            state_dict._metadata = metadata
+
+        def load(module, prefix=''):
+            local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
+            module._load_from_state_dict(
+                state_dict, prefix, local_metadata, True, missing_keys, unexpected_keys, error_msgs)
+            for name, child in module._modules.items():
+                if child is not None:
+                    load(child, prefix + name + '.')
+        start_prefix = ''
+        if not hasattr(model, 'bert') and any(s.startswith('bert.') for s in state_dict.keys()):
+            start_prefix = 'bert.'
+        load(model, prefix=start_prefix)
+        # if len(missing_keys) > 0:
+        #     logger.info("Weights of {} not initialized from pretrained model: {}".format(
+        #         model.__class__.__name__, missing_keys))
+        # if len(unexpected_keys) > 0:
+        #     logger.info("Weights from pretrained model not used in {}: {}".format(
+        #         model.__class__.__name__, unexpected_keys))
+        if len(error_msgs) > 0:
+            raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
+                               model.__class__.__name__, "\n\t".join(error_msgs)))
+        return model
+
