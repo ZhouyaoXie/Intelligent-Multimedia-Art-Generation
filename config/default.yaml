@@ -25,6 +25,7 @@ model:
     cond_mode:        in-attn
     pretrained_params_path:      musemorphose_pretrained_weights.pt
     pretrained_optim_path:       null
+    num_bert_layers:    6
 
 training:
     device:           cuda:0

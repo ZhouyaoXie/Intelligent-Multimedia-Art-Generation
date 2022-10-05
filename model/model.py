@@ -10,11 +10,11 @@ from .music_transformer import VAETransformerEncoder, VAETransformerDecoder
 from .music_encoder_utils import (
     TokenEmbedding, PositionalEncoding, weights_init
 )
-from .text_encoder import BertLayer
+from .text_encoder import BertLayer, BertConfig , BertEmbeddings, BertAttention, BertAttOutput, BertCrossattLayer, BertSelfattLayer, BertIntermediate, BertOutput, BertPreTrainedModel
 from .cross_attn import MusicClIPXLayer
 
 
-class MusicCLIP(nn.Module):
+class MusicCLIP(BertPreTrainedModel):
     def __init__(
         self,
         music_config,
@@ -33,7 +33,19 @@ class MusicCLIP(nn.Module):
         #     [MusicClIPXLayer(text_config) for _ in range(self.n_cross_layers)]
         # )
 
+
+        self.num_x_layers = config.x_layers
+        self.x_layers = nn.ModuleList(
+            [MusicClIPXLayer(config) for _ in range(self.num_x_layers)]
+        )
+
         # self.initialize_params()
+
+
+        #Initialize text encoder
+        self.embeddings = BertEmbeddings(config)
+        self.pooler = BertPooler(config)
+        self.apply(self.init_bert_weights)
 
 
     def _init_music_transformer_from_config(self, config, use_attr_cls = True):
@@ -144,6 +156,19 @@ class MusicCLIP(nn.Module):
         dec_logits = self.dec_out_proj(dec_out)
 
         return mu, logvar, dec_logits
+
+
+    class text_encoder(BertPreTrainedModel):
+        def __init__(self, config):
+            super().__init__()
+            self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_bert_layers)])
+
+        def forward(self, lang_feats, lang_attention_mask):
+            for layer_module in self.layer:
+                lang_feats = layer_module(lang_feats, lang_attention_mask)
+            return lang_feats, lang_attention_mask
+
+
 
     def encode_text(
         self,

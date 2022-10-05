@@ -59,6 +59,22 @@ class MusicClIPXLayer(nn.Module):
 
 		return lang_output, visn_output
 
+class XLayer_encoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        self.num_x_layers = config.x_layers
+        self.x_layers = nn.ModuleList(
+            [LXRTXLayer(config) for _ in range(self.num_x_layers)]
+        )
+
+    def forward(self, lang_feats, lang_attention_mask,
+                music_feats, music_attention_mask=None):
+        for layer_module in self.x_layers:
+            lang_feats, visn_feats = layer_module(lang_feats, lang_attention_mask,
+                                                  visn_feats, visn_attention_mask)
+
+        return lang_feats, music_feats
 
 if __name__ == "__main__":
 

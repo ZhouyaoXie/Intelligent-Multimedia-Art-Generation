@@ -145,6 +145,9 @@ class VisualConfig(object):
 
 VISUAL_CONFIG = VisualConfig()
 
+
+BertLayerNorm = torch.nn.LayerNorm
+
 class BertConfig(object):
 	"""Configuration class to store the configuration of a `BertModel`.
 	"""
