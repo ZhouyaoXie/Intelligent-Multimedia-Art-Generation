@@ -5,6 +5,7 @@ from glob import glob
 import csv
 import torch
 import numpy as np
+import yaml 
 
 from torch.utils.data import Dataset, DataLoader
 from torch.autograd.grad_mode import F
@@ -356,55 +357,90 @@ class REMIFullSongTransformerDataset(Dataset):
     }
 
 
+def get_dataloader(data_config):
+    # files that we do not consider because they have no events between some consecutive bars
+    print("Obtaining files to drop...")
+    no_events_d = {}
+    with open("no_events_fn.txt", "r") as f:
+      for line in f.readlines():
+        fn, num = line.rstrip('\n').split()
+        no_events_d[fn] = int(num)
+
+    # obtain datasets
+    neg_test = load_tuples(data_config['data']['neg_test_split'])
+    neg_train = load_tuples(data_config['data']['neg_train_split'])
+    neg_val = load_tuples(data_config['data']['neg_val_split'])
+    pos_test = load_tuples(data_config['data']['pos_test_split'])
+    pos_train = load_tuples(data_config['data']['pos_train_split'])
+    pos_val = load_tuples(data_config['data']['pos_val_split'])
+    print("Print some examples from neg_test set:")
+    print_dict_ex(neg_test)
+
+    # generate datasets
+    print("Generating train set...")
+    train_dset = REMIFullSongTransformerDataset(
+      data_config['data']['data_dir'], data_config['data']['vocab_path'],
+      do_augment=True, 
+      use_attr_cls=True,
+      model_max_bars=data_config['data']['max_bars'], 
+      model_dec_seqlen=data_config['data']['enc_seqlen'], 
+      model_enc_seqlen=data_config['data']['enc_seqlen'], 
+      min_pitch=22, 
+      max_pitch=107,
+      pos_map=pos_train, 
+      neg_map=neg_train,
+    )
+    print ('train set length:', len(train_dset))
+
+    print("Generating val set...")
+    val_dset = REMIFullSongTransformerDataset(
+      data_config['data']['data_dir'], data_config['data']['vocab_path'],
+      do_augment=True, 
+      use_attr_cls=True,
+      model_max_bars=data_config['data']['max_bars'], 
+      model_dec_seqlen=data_config['data']['enc_seqlen'], 
+      model_enc_seqlen=data_config['data']['enc_seqlen'], 
+      min_pitch=22, 
+      max_pitch=107,
+      pos_map=pos_val, 
+      neg_map=neg_val,
+    )
+    print ('val set length:', len(val_dset))
+
+    print("Generating test set...")
+    test_dset = REMIFullSongTransformerDataset(
+      data_config['data']['data_dir'], data_config['data']['vocab_path'],
+      do_augment=True, 
+      use_attr_cls=True,
+      model_max_bars=data_config['data']['max_bars'], 
+      model_dec_seqlen=data_config['data']['enc_seqlen'], 
+      model_enc_seqlen=data_config['data']['enc_seqlen'], 
+      min_pitch=22, 
+      max_pitch=107,
+      pos_map=pos_test, 
+      neg_map=neg_test,
+    )
+    print ('test set length:', len(test_dset))
+
+    # get dataloader
+    train_dloader = DataLoader(
+      train_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
+    )
+    val_dloader = DataLoader(
+      val_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
+    )
+    test_dloader = DataLoader(
+      test_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
+    )
+
+    return train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader
+
+
 if __name__ == "__main__":
+  config_path = "config/default.yaml"
+  data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
-  # files that we do not consider because they have no events between some consecutive bars
-  print("Obtaining files to drop...")
-  no_events_d = {}
-  with open("no_events_fn.txt", "r") as f:
-    for line in f.readlines():
-      fn, num = line.rstrip('\n').split()
-      no_events_d[fn] = int(num)
-
-  # obtain datasets
-  neg_test = load_tuples("remi_splitted/neg_tuples_test.csv")
-  neg_train = load_tuples("remi_splitted/neg_tuples_train.csv")
-  neg_val = load_tuples("remi_splitted/neg_tuples_val.csv")
-  pos_test = load_tuples("remi_splitted/pos_tuples_test.csv")
-  pos_train = load_tuples("remi_splitted/pos_tuples_train.csv")
-  pos_val = load_tuples("remi_splitted/pos_tuples_val.csv")
-  print("Print some examples from neg_test set:")
-  print_dict_ex(neg_test)
-
-  # generate datasets
-  print("Generating train set...")
-  train_dset = REMIFullSongTransformerDataset(
-    'MuseMorphose-main/remi_dataset', 'MuseMorphose-main/pickles/remi_vocab.pkl', do_augment=True, use_attr_cls=True,
-    model_max_bars=16, model_dec_seqlen=1280, model_enc_seqlen=128, min_pitch=22, max_pitch=107,
-    pos_map=pos_train, neg_map=neg_train,
-  )
-  print ('train set length:', len(train_dset))
-
-  print("Generating val set...")
-  val_dset = REMIFullSongTransformerDataset(
-    'MuseMorphose-main/remi_dataset', 'MuseMorphose-main/pickles/remi_vocab.pkl', do_augment=True, use_attr_cls=True,
-    model_max_bars=16, model_dec_seqlen=1280, model_enc_seqlen=128, min_pitch=22, max_pitch=107,
-    pos_map=pos_val, neg_map=neg_val,
-  )
-  print ('val set length:', len(val_dset))
-
-  print("Generating test set...")
-  test_dset = REMIFullSongTransformerDataset(
-    'MuseMorphose-main/remi_dataset', 'MuseMorphose-main/pickles/remi_vocab.pkl', do_augment=True, use_attr_cls=True,
-    model_max_bars=16, model_dec_seqlen=1280, model_enc_seqlen=128, min_pitch=22, max_pitch=107,
-    pos_map=pos_test, neg_map=neg_test,
-  )
-  print ('test set length:', len(test_dset))
-
-  # get dataloader
-  train_dloader = DataLoader(train_dset, batch_size=4, shuffle=False, num_workers=8)
-  val_dloader = DataLoader(val_dset, batch_size=4, shuffle=False, num_workers=8)
-  test_dloader = DataLoader(test_dset, batch_size=4, shuffle=False, num_workers=8)
+  train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(data_config)
 
   print("Printing example of train_dloader output...")
   for i, batch in enumerate(train_dloader):
