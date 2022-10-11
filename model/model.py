@@ -158,16 +158,20 @@ class MusicCLIP(BertPreTrainedModel):
         return mu, logvar, dec_logits
 
 
-    class text_encoder(BertPreTrainedModel):
-        def __init__(self, config):
-            super().__init__()
-            self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_bert_layers)])
+    # class text_encoder(BertPreTrainedModel):
+    #     def __init__(self, config):
+    #         super().__init__()
+    #         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_bert_layers)])
 
-        def forward(self, lang_feats, lang_attention_mask):
-            for layer_module in self.layer:
-                lang_feats = layer_module(lang_feats, lang_attention_mask)
-            return lang_feats, lang_attention_mask
+    #     def forward(self, lang_feats, lang_attention_mask):
+    #         for layer_module in self.layer:
+    #             lang_feats = layer_module(lang_feats, lang_attention_mask)
+    #         return lang_feats, lang_attention_mask
 
+    def text_encoder(self, lang_feats, lang_attention_mask):
+        for layer_module in self.layer:
+            lang_feats = layer_module(lang_feats, lang_attention_mask)
+        return lang_feats, lang_attention_mask
 
 
     def encode_text(
@@ -279,7 +283,7 @@ class MusicCLIP(BertPreTrainedModel):
         # Run music embedding layer
         # Note: Word embedding layer was executed outside this module.
         #       Keep this design to allow loading BERT weights.
-        music_feats = self.encode_music(
+        mu, logvar, music_feats = self.encode_music(
             enc_inp, 
             dec_inp, 
             dec_inp_bar_pos, 
@@ -290,18 +294,14 @@ class MusicCLIP(BertPreTrainedModel):
 
         # Run language layers
         for layer_module in self.layer:
-            lang_feats = layer_module(lang_feats, lang_attention_mask)
-
-        # Run relational layers
-        # for layer_module in self.r_layers:
-        #     visn_feats = layer_module(visn_feats, visn_attention_mask)
+            lang_feats, lang_attention_mask = layer_module(lang_feats, lang_attention_mask)
 
         # Run cross-modality layers
         for layer_module in self.x_layers:
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
 
-
+        #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         pooled_output = self.pooler(lang_feats)
         return lang_feats, music_feats , pooled_output
  
