@@ -12,6 +12,8 @@ from .music_encoder_utils import (
 )
 from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel
 from .cross_attn import MusicClIPXLayer
+from .tokenization import BertTokenizer
+
 
 
 class MusicCLIP(BertPreTrainedModel):
@@ -40,11 +42,17 @@ class MusicCLIP(BertPreTrainedModel):
         # self.initialize_params()
 
 
+        self.tokenizer = BertTokenizer.from_pretrained(
+            "bert-base-uncased",
+            do_lower_case=True
+        )
+        self.max_seq_length = 20
         #Initialize text encoder
         self.embeddings = BertEmbeddings(text_config)
         self.pooler = BertPooler(text_config)
         self.apply(self.init_bert_weights)
         self._init_bert_from_config(text_config)
+
 
 
     def _init_music_transformer_from_config(self, config, use_attr_cls = True):
@@ -269,10 +277,48 @@ class MusicCLIP(BertPreTrainedModel):
         # )
         return 
 
+
+def convert_sents_to_features(sents, max_seq_length, tokenizer):
+    """Loads a data file into a list of `InputBatch`s."""
+
+    features = []
+    for (i, sent) in enumerate(sents):
+        tokens_a = tokenizer.tokenize(sent.strip())
+
+        # Account for [CLS] and [SEP] with "- 2"
+        if len(tokens_a) > max_seq_length - 2:
+            tokens_a = tokens_a[:(max_seq_length - 2)]
+        
+        # Keep segment id which allows loading BERT-weights.
+        tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
+        segment_ids = [0] * len(tokens)
+
+        input_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real
+        # tokens are attended to.
+        input_mask = [1] * len(input_ids)
+
+        # Zero-pad up to the sequence length.
+        padding = [0] * (max_seq_length - len(input_ids))
+        input_ids += padding
+        input_mask += padding
+        segment_ids += padding
+
+        assert len(input_ids) == max_seq_length
+        assert len(input_mask) == max_seq_length
+        assert len(segment_ids) == max_seq_length
+
+        features.append(
+                InputFeatures(input_ids=input_ids,
+                              input_mask=input_mask,
+                              segment_ids=segment_ids))
+    return features
+
+
     def forward(
         self,
-        lang_feats,
-        lang_attention_mask,
+        sents,
         enc_inp, 
         dec_inp, 
         dec_inp_bar_pos, 
@@ -280,6 +326,7 @@ class MusicCLIP(BertPreTrainedModel):
         polyph_cls=None, 
         padding_mask=None,
         music_attention_mask = None,
+        token_type_ids = None
     ):
         """ Adapted from https://github.com/airsplay/lxmert/blob/master/src/lxrt/modeling.py#L546
         
@@ -296,6 +343,30 @@ class MusicCLIP(BertPreTrainedModel):
             padding_mask
         )
 
+
+        train_features = convert_sents_to_features(
+            sents, self.max_seq_length, self.tokenizer)
+
+        input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long).cuda()
+        input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).cuda()
+        segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long).cuda()
+
+
+        if attention_mask is None:
+            attention_mask = torch.ones_like(input_ids)
+        if token_type_ids is None:
+            token_type_ids = torch.zeros_like(input_ids)
+        extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+
+        # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
+        # masked positions, this operation will create a tensor which is 0.0 for
+        # positions we want to attend and -10000.0 for masked positions.
+        # Since we are adding it to the raw scores before the softmax, this is
+        # effectively the same as removing these entirely.
+        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype) # fp16 compatibility
+        lang_attention_mask = (1.0 - extended_attention_mask) * -10000.0
+
+        lang_feats = self.embeddings(input_ids, segment_ids)
         # Run language layers
         for layer_module in self.layer:
             lang_feats, lang_attention_mask = layer_module(lang_feats, lang_attention_mask)
