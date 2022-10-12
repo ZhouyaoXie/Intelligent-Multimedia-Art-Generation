@@ -20,33 +20,27 @@ class MusicCLIP(BertPreTrainedModel):
     def __init__(
         self,
         music_config,
-        text_config = None,
+        text_config,
     ):
         super().__init__()
         self.music_config = music_config 
         self.config = text_config
 
-        self._init_music_transformer_from_config(music_config)
+        # initialzie music encoder
+        self._init_music_encoder_from_config(music_config)
 
-        # self._init_bert_from_config(text_config)
-        # self.x_layers = nn.ModuleList(
-        #     [MusicClIPXLayer(text_config) for _ in range(self.n_cross_layers)]
-        # )
-
-
-        self.num_x_layers = config.xlayers
+        # initialize cross attention layers
+        self.num_x_layers = music_config.num_x_layers
         self.x_layers = nn.ModuleList(
             [MusicClIPXLayer(text_config) for _ in range(self.num_x_layers)]
         )
-
-        # self.initialize_params()
-
 
         self.tokenizer = BertTokenizer.from_pretrained(
             "bert-base-uncased",
             do_lower_case=True
         )
         self.max_seq_length = 20
+
         #Initialize text encoder
         self.embeddings = BertEmbeddings(text_config)
         self.pooler = BertPooler(text_config)
@@ -54,11 +48,10 @@ class MusicCLIP(BertPreTrainedModel):
         self._init_bert_from_config(text_config)
 
 
-
-    def _init_music_transformer_from_config(self, config, use_attr_cls = True):
+    def _init_music_transformer_from_config(self, config):
         self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
         self.pe = PositionalEncoding(config.d_embed)
-        self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
+        # self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
         self.encoder = VAETransformerEncoder(
             config.enc_n_layer, 
             config.enc_n_head, 
@@ -68,36 +61,6 @@ class MusicCLIP(BertPreTrainedModel):
             config.enc_dropout, 
             config.enc_activation
         )
-
-        if use_attr_cls:
-            self.decoder = VAETransformerDecoder(
-                config.dec_n_layer, 
-                config.dec_n_head, 
-                config.dec_d_model, 
-                config.dec_d_ff, 
-                config.d_latent + config.d_polyph_emb + config.d_rfreq_emb,
-                dropout = config.dec_dropout, 
-                activation = config.dec_activation,
-                cond_mode = config.cond_mode
-            )
-        else:
-            self.decoder = VAETransformerDecoder(
-                config.dec_n_layer, 
-                config.dec_n_head, 
-                config.dec_d_model, 
-                config.dec_d_ff, 
-                config.d_latent,
-                dropout = config.dec_dropout, 
-                activation = config.dec_activation,
-                cond_mode = config.cond_mode
-            )
-
-        if use_attr_cls:
-            self.rfreq_attr_emb = TokenEmbedding(config.n_rfreq_cls, config.d_rfreq_emb, config.d_rfreq_emb)
-            self.polyph_attr_emb = TokenEmbedding(config.n_polyph_cls, config.d_polyph_emb, config.d_polyph_emb)
-        else:
-            self.rfreq_attr_emb = None
-            self.polyph_attr_emb = None
 
         self.emb_dropout = nn.Dropout(config.enc_dropout)
 
@@ -145,31 +108,6 @@ class MusicCLIP(BertPreTrainedModel):
         return music_feats
 
 
-
-        # #decoder part
-        # vae_latent = self.reparameterize(mu, logvar)
-        # vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
-
-        # dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(vae_latent.device)
-        # for n in range(dec_inp.size(1)):
-        #     # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
-        #     # -- stores [[start idx of bar #1, sample #1, ..., start idx of bar #K, sample #1, seqlen of sample #1], [same for another sample], ...]
-        #     for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
-        #         dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
-
-        # if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
-        #     dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
-        #     dec_polyph_emb = self.polyph_attr_emb(polyph_cls)
-        #     dec_seg_emb_cat = torch.cat([dec_seg_emb, dec_rfreq_emb, dec_polyph_emb], dim=-1)
-        # else:
-        #     dec_seg_emb_cat = dec_seg_emb
-
-        # dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
-        # dec_logits = self.dec_out_proj(dec_out)
-
-        # return mu, logvar, dec_logits
-
-
     # class text_encoder(BertPreTrainedModel):
     #     def __init__(self, configs):
     #         super().__init__()
@@ -180,140 +118,10 @@ class MusicCLIP(BertPreTrainedModel):
     #             lang_feats = layer_module(lang_feats, lang_attention_mask)
     #         return lang_feats, lang_attention_mask
 
-    def text_encoder(self, lang_feats, lang_attention_mask):
-        for layer_module in self.layer:
-            lang_feats = layer_module(lang_feats, lang_attention_mask)
-        return lang_feats, lang_attention_mask
-
-
-    def encode_text(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        encoder_attention_mask: Optional[torch.FloatTensor] = None,
-        past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = False,
-        output_hidden_states: Optional[bool] = False,
-        return_dict: Optional[bool] = True,
-    ):
-        all_hidden_states = () if output_hidden_states else None
-        all_self_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
-
-        next_decoder_cache = () if use_cache else None
-        for i, layer_module in enumerate(self.layer):
-            if output_hidden_states:
-                all_hidden_states = all_hidden_states + (hidden_states,)
-
-            layer_head_mask = head_mask[i] if head_mask is not None else None
-            past_key_value = past_key_values[i] if past_key_values is not None else None
-
-            if self.gradient_checkpointing and self.training:
-
-                if use_cache:
-                    # logger.warning(
-                    #     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                    # )
-                    use_cache = False
-
-                def create_custom_forward(module):
-                    def custom_forward(*inputs):
-                        return module(*inputs, past_key_value, output_attentions)
-
-                    return custom_forward
-
-                layer_outputs = torch.utils.checkpoint.checkpoint(
-                    create_custom_forward(layer_module),
-                    hidden_states,
-                    attention_mask,
-                    layer_head_mask,
-                    encoder_hidden_states,
-                    encoder_attention_mask,
-                )
-            else:
-                layer_outputs = layer_module(
-                    hidden_states,
-                    attention_mask,
-                    layer_head_mask,
-                    encoder_hidden_states,
-                    encoder_attention_mask,
-                    past_key_value,
-                    output_attentions,
-                )
-
-            hidden_states = layer_outputs[0]
-            if use_cache:
-                next_decoder_cache += (layer_outputs[-1],)
-            if output_attentions:
-                all_self_attentions = all_self_attentions + (layer_outputs[1],)
-                if self.config.add_cross_attention:
-                    all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
-
-        if output_hidden_states:
-            all_hidden_states = all_hidden_states + (hidden_states,)
-
-        if not return_dict:
-            return tuple(
-                v
-                for v in [
-                    hidden_states,
-                    next_decoder_cache,
-                    all_hidden_states,
-                    all_self_attentions,
-                    all_cross_attentions,
-                ]
-                if v is not None
-            )
-        # TODO: do we need this class or no?
-        # return BaseModelOutputWithPastAndCrossAttentions(
-        #     last_hidden_state=hidden_states,
-        #     past_key_values=next_decoder_cache,
-        #     hidden_states=all_hidden_states,
-        #     attentions=all_self_attentions,
-        #     cross_attentions=all_cross_attentions,
-        # )
-        return 
-
-
-def convert_sents_to_features(sents, max_seq_length, tokenizer):
-    """Loads a data file into a list of `InputBatch`s."""
-
-    features = []
-    for (i, sent) in enumerate(sents):
-        tokens_a = tokenizer.tokenize(sent.strip())
-
-        # Account for [CLS] and [SEP] with "- 2"
-        if len(tokens_a) > max_seq_length - 2:
-            tokens_a = tokens_a[:(max_seq_length - 2)]
-        
-        # Keep segment id which allows loading BERT-weights.
-        tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
-        segment_ids = [0] * len(tokens)
-
-        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        input_mask = [1] * len(input_ids)
-
-        # Zero-pad up to the sequence length.
-        padding = [0] * (max_seq_length - len(input_ids))
-        input_ids += padding
-        input_mask += padding
-        segment_ids += padding
-
-        assert len(input_ids) == max_seq_length
-        assert len(input_mask) == max_seq_length
-        assert len(segment_ids) == max_seq_length
-
-        features.append(
-                InputFeatures(input_ids=input_ids,
-                              input_mask=input_mask,
-                              segment_ids=segment_ids))
-    return features
+    # def text_encoder(self, lang_feats, lang_attention_mask):
+    #     for layer_module in self.layer:
+    #         lang_feats = layer_module(lang_feats, lang_attention_mask)
+    #     return lang_feats, lang_attention_mask
 
 
     def forward(
@@ -379,43 +187,43 @@ def convert_sents_to_features(sents, max_seq_length, tokenizer):
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         pooled_output = self.pooler(lang_feats)
         return lang_feats, music_feats , pooled_output
- 
 
-    # below are methods for music decoder generation 
-    def reparameterize(self, mu, logvar, use_sampling=True, sampling_var=1.):
-        std = torch.exp(0.5 * logvar).to(mu.device)
-        if use_sampling:
-            eps = torch.randn_like(std).to(mu.device) * sampling_var
-        else:
-            eps = torch.zeros_like(std).to(mu.device)
 
-        return eps * std + mu
+def convert_sents_to_features(sents, max_seq_length, tokenizer):
+    """Loads a data file into a list of `InputBatch`s."""
 
-    def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
-        token_emb = self.token_emb(inp)
-        enc_inp = self.emb_dropout(token_emb) + self.pe(inp.size(0))
+    features = []
+    for (i, sent) in enumerate(sents):
+        tokens_a = tokenizer.tokenize(sent.strip())
 
-        _, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
-        mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
-        vae_latent = self.reparameterize(mu, logvar, use_sampling=use_sampling, sampling_var=sampling_var)
+        # Account for [CLS] and [SEP] with "- 2"
+        if len(tokens_a) > max_seq_length - 2:
+            tokens_a = tokens_a[:(max_seq_length - 2)]
+        
+        # Keep segment id which allows loading BERT-weights.
+        tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
+        segment_ids = [0] * len(tokens)
 
-        return vae_latent
+        input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-    def generate(self, inp, dec_seg_emb, rfreq_cls=None, polyph_cls=None, keep_last_only=True):
-        token_emb = self.token_emb(inp)
-        dec_inp = self.emb_dropout(token_emb) + self.pe(inp.size(0))
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real
+        # tokens are attended to.
+        input_mask = [1] * len(input_ids)
 
-        if rfreq_cls is not None and polyph_cls is not None:
-            dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
-            dec_polyph_emb = self.polyph_attr_emb(polyph_cls)
-            dec_seg_emb_cat = torch.cat([dec_seg_emb, dec_rfreq_emb, dec_polyph_emb], dim=-1)
-        else:
-            dec_seg_emb_cat = dec_seg_emb
+        # Zero-pad up to the sequence length.
+        padding = [0] * (max_seq_length - len(input_ids))
+        input_ids += padding
+        input_mask += padding
+        segment_ids += padding
 
-        out = self.decoder(dec_inp, dec_seg_emb_cat)
-        out = self.dec_out_proj(out)
+        assert len(input_ids) == max_seq_length
+        assert len(input_mask) == max_seq_length
+        assert len(segment_ids) == max_seq_length
 
-        if keep_last_only:
-            out = out[-1, ...]
+        features.append(
+            InputFeatures(input_ids=input_ids,
+                            input_mask=input_mask,
+                            segment_ids=segment_ids)
+        )
 
-        return out
+    return features

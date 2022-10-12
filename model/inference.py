@@ -38,52 +38,39 @@ out_dir = config['generate']['out_dir']
 class MusicCLIPInfer(BertPreTrainedModel):
     def __init__(
         self,
+        model,
         music_config,
-        text_config = None,
+        text_config,
     ):
         super().__init__()
+        self.model = model
         self.music_config = music_config 
         self.config = text_config
 
-        if text_config is not None:
-            self.n_cross_layers = text_config.num_x_layers
-        self._init_music_transformer_from_config(music_config)
-
-        # self._init_bert_from_config(text_config)
+        # cross attention layers are in the encoder object that is passed in
+        # self.num_x_layers = music_config.num_x_layers
         # self.x_layers = nn.ModuleList(
-        #     [MusicClIPXLayer(text_config) for _ in range(self.n_cross_layers)]
+        #     [MusicClIPXLayer(text_config) for _ in range(self.num_x_layers)]
         # )
 
-
-        self.num_x_layers = config.x_layers
-        self.x_layers = nn.ModuleList(
-            [MusicClIPXLayer(config) for _ in range(self.num_x_layers)]
-        )
-
-        # self.initialize_params()
+        self._init_music_decoder_from_config(music_config)
 
 
-        #Initialize text encoder
-        self.embeddings = BertEmbeddings(config)
-        self.pooler = BertPooler(config)
-        self.apply(self.init_bert_weights)
-
-
-    def _init_music_transformer_from_config(self, config, use_attr_cls = True):
-        self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
-        self.pe = PositionalEncoding(config.d_embed)
+    def _init_music_decoder_from_config(self, config):
+        # self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
+        # self.pe = PositionalEncoding(config.d_embed)
         self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
-        self.encoder = VAETransformerEncoder(
-            config.enc_n_layer, 
-            config.enc_n_head, 
-            config.enc_d_model, 
-            config.enc_d_ff, 
-            config.d_latent, 
-            config.enc_dropout, 
-            config.enc_activation
-        )
+        # self.encoder = VAETransformerEncoder(
+        #     config.enc_n_layer, 
+        #     config.enc_n_head, 
+        #     config.enc_d_model, 
+        #     config.enc_d_ff, 
+        #     config.d_latent, 
+        #     config.enc_dropout, 
+        #     config.enc_activation
+        # )
 
-        if use_attr_cls:
+        if config.use_attr_cls:
             self.decoder = VAETransformerDecoder(
                 config.dec_n_layer, 
                 config.dec_n_head, 
@@ -106,7 +93,7 @@ class MusicCLIPInfer(BertPreTrainedModel):
                 cond_mode = config.cond_mode
             )
 
-        if use_attr_cls:
+        if config.use_attr_cls:
             self.rfreq_attr_emb = TokenEmbedding(config.n_rfreq_cls, config.d_rfreq_emb, config.d_rfreq_emb)
             self.polyph_attr_emb = TokenEmbedding(config.n_polyph_cls, config.d_polyph_emb, config.d_polyph_emb)
         else:
@@ -222,10 +209,10 @@ class MusicCLIPInfer(BertPreTrainedModel):
         return eps * std + mu
 
     def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
-        token_emb = self.token_emb(inp)
-        enc_inp = self.emb_dropout(token_emb) + self.pe(inp.size(0))
+        token_emb = self.model.token_emb(inp)
+        enc_inp = self.model.emb_dropout(token_emb) + self.model.pe(inp.size(0))
 
-        _, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
+        _, mu, logvar = self.model.encoder(enc_inp, padding_mask=padding_mask)
         mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
         vae_latent = self.reparameterize(mu, logvar, use_sampling=use_sampling, sampling_var=sampling_var)
 
@@ -344,8 +331,8 @@ class MusicCLIPInfer(BertPreTrainedModel):
 
 
     def generate(self, inp, dec_seg_emb, rfreq_cls=None, polyph_cls=None, keep_last_only=True):
-        token_emb = self.token_emb(inp)
-        dec_inp = self.emb_dropout(token_emb) + self.pe(inp.size(0))
+        token_emb = self.model.token_emb(inp)
+        dec_inp = self.model.emb_dropout(token_emb) + self.model.pe(inp.size(0))
 
         if rfreq_cls is not None and polyph_cls is not None:
             dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)

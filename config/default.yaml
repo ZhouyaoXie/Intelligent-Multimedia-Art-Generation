@@ -36,6 +36,9 @@ model:
     num_bert_layers:    6
     use_attr_cls:     False
 
+x_attention:
+    num_x_layers:     6
+
 training:
     device:           cuda:0
     ckpt_dir:         ./ckpt/enc_dec_12L-16_bars-seqlen_1280
@@ -54,6 +57,7 @@ training:
     log_interval:     10
     val_interval:     50
     mode:   TRAIN
+    output_path:      outputs/
 
 generate:
     out_dir:                    outputs/

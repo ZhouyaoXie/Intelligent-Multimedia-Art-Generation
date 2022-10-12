@@ -36,6 +36,7 @@ class MusicConfig:
         self.cond_mode = mconf['cond_mode']
         self.n_rfreq_cls = mconf.get('n_rfreq_cls', 8)
         self.n_polyph_cls = mconf.get('n_polyph_cls', 8)
+        self.use_attr_cls = mconf['use_attr_cls']
 
         # music encoder 
         self.enc_n_layer = mconf['enc_n_layer']
@@ -55,6 +56,9 @@ class MusicConfig:
         self.d_embed = mconf['d_embed']
         self.dec_dropout = mconf.get('dec_dropout', 0.1)
         self.dec_activation = mconf.get('dec_activation', 'relu')
+
+        # cross_attention
+        self.num_x_layers = config['x_attention']['num_x_layers']
 
         # training
         self.ckpt_interval = config['training']['ckpt_interval']
