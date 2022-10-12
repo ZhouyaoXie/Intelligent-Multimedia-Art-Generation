@@ -86,21 +86,41 @@ def _train():
     epochs = music_config['training']['max_epochs']
     model.zero_grad()
 
-	# model = model.double()
-	start_time  = time.time()
-	model.train()
-	for epoch in range(epochs):
-		print("Starting epoch ", epoch)
-		for step, (x,y) in enumerate(train_loader):
-		    x = x.to(device)
-		    y = y.to(device)
-		    lang_feats, vision_feats, pooled_output = model(x)
-		    loss = c_loss(pooled_output,y)
-		    optimizer.zero_grad()
-		    loss.backward()
-		    optimizer.step()
-			print("loss", loss.item())
-		    #training accuracy
+    # model = model.double()
+    start_time  = time.time()
+    model.train()
+    for epoch in range(epochs):
+        print("Starting epoch ", epoch)
+        for batch_idx, batch_samples in enumerate(train_loader):
+            model.zero_grad()
+            batch_enc_inp = batch_samples['enc_input'].permute(2, 0, 1).to(device)
+            batch_dec_inp = batch_samples['dec_input'].permute(1, 0).to(device)
+            batch_dec_tgt = batch_samples['dec_target'].permute(1, 0).to(device)
+            batch_inp_bar_pos = batch_samples['bar_pos'].to(device)
+            batch_inp_lens = batch_samples['length']
+            batch_padding_mask = batch_samples['enc_padding_mask'].to(device)
+            batch_rfreq_cls = batch_samples['rhymfreq_cls'].permute(1, 0).to(device)
+            batch_polyph_cls = batch_samples['polyph_cls'].permute(1, 0).to(device)
+            text = batch_samples['text_label'].permute(1, 0).to(device)
+            y = batch_samples['pos'].permute(1, 0).to(device)
+
+            lang_feats, vision_feats, pooled_output = model(
+                lang_feats,  # TODO - text
+                lang_attention_mask,   # TODO - text
+                batch_enc_inp, 
+                batch_dec_inp, 
+                batch_inp_bar_pos, 
+                batch_rfreq_cls=None, 
+                batch_polyph_cls=None, 
+                batch_padding_mask=None,
+                music_attention_mask = None,
+            )
+            loss = c_loss(pooled_output,y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            print("loss", loss.item())
+            #training accuracy
 
 def _inf():
     return
