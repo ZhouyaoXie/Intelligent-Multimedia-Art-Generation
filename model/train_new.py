@@ -18,7 +18,7 @@ from model.model import MusicCLIP
 
 from dataloader.dataloader_updated import get_dataloader
 
-from config.text_config import text_args
+from config.text_args import text_config
 from .contrastive_loss import ContrastiveLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -68,6 +68,9 @@ config_path = "config/default.yaml"
 
 
 music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+model_out_path = music_config['model']['output_path']
+bs = music_config["batch_size"]
+epochs = music_config['training']['max_epochs']
 
 
 def _train():
@@ -79,9 +82,8 @@ def _train():
 
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay = 5e-4)
-    c_loss = ContrastiveLoss(music_config["batch_size"])
+    c_loss = ContrastiveLoss(bs)
 
-    epochs = music_config['training']['max_epochs']
     model.zero_grad()
 
     # model = model.double()
@@ -120,7 +122,17 @@ def _train():
             print("loss", loss.item())
             #training accuracy
 
+            # save model 
+            torch.save(model.state_dict(), model_out_path + "epoch{}_bs{}.pt".format(
+                epoch = epochs, bs = bs,
+            ))
+
+
 def _inf():
+    trained_mdl = ()
+    # mdl = MusicCLIPInfer(saved_musicCLIP)
+    # generate
+
     return
 
 

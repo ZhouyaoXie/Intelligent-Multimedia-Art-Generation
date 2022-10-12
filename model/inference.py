@@ -35,7 +35,7 @@ event2idx = vocab
 
 out_dir = config['generate']['out_dir']
 
-class MusicCLIP(BertPreTrainedModel):
+class MusicCLIPInfer(BertPreTrainedModel):
     def __init__(
         self,
         music_config,
