@@ -17,6 +17,8 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 
+from config.text_config import text_args
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -64,14 +66,17 @@ def dataloader(config):
 
     return dset, dset_val, dloader, dloader_val
 
+
+music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+
+
 def _train():
-    data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
     trainset, trainset_val, train_loader, train_loader_val = dataloader(data_config)
 
-    # need to get from true dataloader 
-    config.n_token = 333
+    # # need to get from true dataloader 
+    # config.n_token = 333
 
-    model = MusicCLIP(config)
+    model = MusicCLIP(music_config, text_config)
     print(model.state_dict().keys())
 
     model.to(device)

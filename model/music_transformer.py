@@ -91,7 +91,7 @@ class VAETransformerEncoder(nn.Module):
     )
     self.tr_encoder = nn.TransformerEncoder(
       self.tr_encoder_layer, n_layer
-    )
+    )             
 
     self.fc_mu = nn.Linear(d_model, d_vae_latent)
     self.fc_logvar = nn.Linear(d_model, d_vae_latent)
@@ -101,7 +101,7 @@ class VAETransformerEncoder(nn.Module):
     hidden_out = out[0, :, :]
     mu, logvar = self.fc_mu(hidden_out), self.fc_logvar(hidden_out)
 
-    return hidden_out, mu, logvar
+    return out, hidden_out, mu, logvar
 
 
 class VAETransformerDecoder(nn.Module):

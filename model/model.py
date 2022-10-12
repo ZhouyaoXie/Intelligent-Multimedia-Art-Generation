@@ -24,8 +24,6 @@ class MusicCLIP(BertPreTrainedModel):
         self.music_config = music_config 
         self.config = text_config
 
-        if text_config is not None:
-            self.n_cross_layers = text_config.num_x_layers
         self._init_music_transformer_from_config(music_config)
 
         # self._init_bert_from_config(text_config)
@@ -34,18 +32,19 @@ class MusicCLIP(BertPreTrainedModel):
         # )
 
 
-        self.num_x_layers = config.x_layers
+        self.num_x_layers = config.xlayers
         self.x_layers = nn.ModuleList(
-            [MusicClIPXLayer(config) for _ in range(self.num_x_layers)]
+            [MusicClIPXLayer(text_config) for _ in range(self.num_x_layers)]
         )
 
         # self.initialize_params()
 
 
         #Initialize text encoder
-        self.embeddings = BertEmbeddings(config)
-        self.pooler = BertPooler(config)
+        self.embeddings = BertEmbeddings(text_config)
+        self.pooler = BertPooler(text_config)
         self.apply(self.init_bert_weights)
+        self._init_bert_from_config(text_config)
 
 
     def _init_music_transformer_from_config(self, config, use_attr_cls = True):
@@ -289,7 +288,7 @@ class MusicCLIP(BertPreTrainedModel):
         # Run music embedding layer
         # Note: Word embedding layer was executed outside this module.
         #       Keep this design to allow loading BERT weights.
-        mu, logvar, music_feats = self.encode_music(
+        music_feats = self.encode_music(
             enc_inp, 
             dec_inp, 
             dec_inp_bar_pos, 
