@@ -1,9 +1,52 @@
+from urllib.parse import urlparse
 import torch
 import pickle
 from scipy.spatial import distance
+import numpy as np 
+import sys 
+import os 
 
 # device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu')
+
+###########################################
+# little helpers
+###########################################
+def word2event(word_seq, idx2event):
+  return [ idx2event[w] for w in word_seq ]
+
+def get_beat_idx(event):
+  return int(event.split('_')[-1])
+
+###########################################
+# sampling utilities
+###########################################
+def temperatured_softmax(logits, temperature):
+  try:
+    probs = np.exp(logits / temperature) / np.sum(np.exp(logits / temperature))
+    assert np.count_nonzero(np.isnan(probs)) == 0
+  except:
+    print ('overflow detected, use 128-bit')
+    logits = logits.astype(np.float128)
+    probs = np.exp(logits / temperature) / np.sum(np.exp(logits / temperature))
+    probs = probs.astype(float)
+  return probs
+
+def nucleus(probs, p):
+    probs /= sum(probs)
+    sorted_probs = np.sort(probs)[::-1]
+    sorted_index = np.argsort(probs)[::-1]
+    cusum_sorted_probs = np.cumsum(sorted_probs)
+    after_threshold = cusum_sorted_probs > p
+    if sum(after_threshold) > 0:
+        last_index = np.where(after_threshold)[0][1]
+        candi_index = sorted_index[:last_index]
+    else:
+        candi_index = sorted_index[:3] # just assign a value
+    candi_probs = np.array([probs[i] for i in candi_index], dtype=np.float64)
+    candi_probs /= sum(candi_probs)
+    word = np.random.choice(candi_index, size=1, p=candi_probs)[0]
+    return word
 
 def numpy_to_tensor(arr, use_gpu=True, device='cuda:0'):
   if use_gpu:

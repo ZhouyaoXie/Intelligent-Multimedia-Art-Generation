@@ -10,7 +10,7 @@ from .music_transformer import VAETransformerEncoder, VAETransformerDecoder
 from .music_encoder_utils import (
     TokenEmbedding, PositionalEncoding, weights_init
 )
-from .text_encoder import BertLayer, BertConfig , BertEmbeddings, BertAttention, BertAttOutput, BertCrossattLayer, BertSelfattLayer, BertIntermediate, BertOutput, BertPreTrainedModel
+from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel
 from .cross_attn import MusicClIPXLayer
 
 

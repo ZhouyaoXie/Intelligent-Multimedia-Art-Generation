@@ -54,6 +54,7 @@ training:
     val_interval:     50
 
 generate:
+    out_dir:                    outputs/
     temperature:                1.2
     nucleus_p:                  0.9
     use_latent_sampling:        False
