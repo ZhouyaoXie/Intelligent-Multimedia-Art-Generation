@@ -20,6 +20,7 @@ from .cross_attn import MusicClIPXLayer
 from .utils import nucleus, pickle_load, numpy_to_tensor, temperatured_softmax, tensor_to_numpy, get_beat_idx, word2event
 from .remi2midi import remi2midi
 
+
 config_path = "config/default.yaml"
 config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
@@ -124,13 +125,21 @@ class MusicCLIP(BertPreTrainedModel):
         self.gradient_checkpointing = False
 
 
-    def decode_music(self):
+    def decode_music(
+        self, 
+        enc_bt_size = config['data']['enc_seqlen'], 
+        enc_n_bars = config['data']['max_bars'], 
+    ):
         #decoder part
         mu = 0
         logvar = 1
         vae_latent = self.reparameterize(mu, logvar)
+        # enc_bt_size & enc_n_bars come from: enc_inp.size(1), enc_inp.size(2)
+        # enc_inp is 'enc_input' in dataset
+        # its length should be self.model_enc_seqlen
         vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
 
+        # [shape of dec_inp] (seqlen_per_sample, bsize)
         dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(vae_latent.device)
         for n in range(dec_inp.size(1)):
             # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
