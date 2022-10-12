@@ -18,7 +18,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 
 from config.text_config import text_args
-
+from .contrastive_loss import ContrastiveLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -71,7 +71,7 @@ music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
 
 def _train():
-    trainset, trainset_val, train_loader, train_loader_val = dataloader(data_config)
+    trainset, trainset_val, train_loader, train_loader_val = dataloader(music_config)
 
     # # need to get from true dataloader 
     # config.n_token = 333
@@ -81,9 +81,11 @@ def _train():
 
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay = 5e-4)
+    c_loss = contrastive_loss(music_config["batch_size"])
 
-    epochs = data_config['training']['max_epochs']
+    epochs = music_config['training']['max_epochs']
     model.zero_grad()
+
 	# model = model.double()
 	start_time  = time.time()
 	model.train()
@@ -93,20 +95,23 @@ def _train():
 		    x = x.to(device)
 		    y = y.to(device)
 		    lang_feats, vision_feats, pooled_output = model(x)
-		    loss = autoencoder_loss(d,x)
+		    loss = c_loss(pooled_output,y)
 		    optimizer.zero_grad()
 		    loss.backward()
 		    optimizer.step()
 			print("loss", loss.item())
 		    #training accuracy
 
+def _inf():
+    return
+
 
 
 def train():
-    mode = params.mode.lower()
+    mode = music_config["training"]["mode"]
     if mode == "TRAIN":
         _train()
-    elif mode == "EVAL":
-        _eval()
+    elif mode == "INFERENCE":
+        _inf()
     else:
         raise ValueError("Unrecognized mode!")

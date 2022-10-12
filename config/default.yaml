@@ -52,6 +52,7 @@ training:
     ckpt_interval:    50
     log_interval:     10
     val_interval:     50
+    mode:   TRAIN
 
 generate:
     temperature:                1.2
