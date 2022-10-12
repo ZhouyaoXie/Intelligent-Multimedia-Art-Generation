@@ -106,8 +106,7 @@ def _train():
             y = batch_samples['pos'].permute(1, 0).to(device)
 
             lang_feats, vision_feats, pooled_output = model(
-                lang_feats,  # TODO - text
-                lang_attention_mask,   # TODO - text
+                text,
                 batch_enc_inp, 
                 batch_dec_inp, 
                 batch_inp_bar_pos, 
