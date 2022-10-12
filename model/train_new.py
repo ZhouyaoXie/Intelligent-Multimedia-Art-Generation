@@ -18,7 +18,8 @@ from model.model import MusicCLIP
 
 from dataloader.dataloader_updated import get_dataloader
 
-from config.text_args import text_config
+from ..config.text_config import text_args
+from model.inference import MusicCLIPInfer
 from .contrastive_loss import ContrastiveLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -73,7 +74,7 @@ bs = music_config["batch_size"]
 epochs = music_config['training']['max_epochs']
 
 
-def _train():
+def _train(music_config, text_args):
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     music_config.n_token = train_dset.vocab_size   # 333
 
@@ -127,12 +128,20 @@ def _train():
             ))
 
 
-def _inf():
-    trained_mdl = ()
-    # mdl = MusicCLIPInfer(saved_musicCLIP)
-    # generate
+def _inf(music_config, text_args, model_save_path = None):
+    # load saved MusicCLIP model 
+    train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
+    music_config.n_token = train_dset.vocab_size   # 333
+    model = MusicCLIP(music_config, text_args)
+    if model_save_path is None:
+        model_save_path = model_out_path + "epoch{}_bs{}.pt".format(
+                epoch = epochs, bs = bs,
+            )
+    model.load_state_dict(torch.load(model_save_path))
+    model.eval()
+    infer_model = MusicCLIPInfer(model, music_config, text_args)
 
-    return
+    return infer_model
 
 
 
