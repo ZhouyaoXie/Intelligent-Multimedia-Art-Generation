@@ -134,28 +134,34 @@ class MusicCLIP(BertPreTrainedModel):
         if padding_mask is not None:
             padding_mask = padding_mask.reshape(-1, padding_mask.size(-1))
 
-        _, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
-        vae_latent = self.reparameterize(mu, logvar)
-        vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
+        music_feats , music_feats_hidden, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
+        # music_feats = np.concat(mu, logvar)
+        return music_feats
 
-        dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(vae_latent.device)
-        for n in range(dec_inp.size(1)):
-            # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
-            # -- stores [[start idx of bar #1, sample #1, ..., start idx of bar #K, sample #1, seqlen of sample #1], [same for another sample], ...]
-            for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
-                dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
 
-        if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
-            dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
-            dec_polyph_emb = self.polyph_attr_emb(polyph_cls)
-            dec_seg_emb_cat = torch.cat([dec_seg_emb, dec_rfreq_emb, dec_polyph_emb], dim=-1)
-        else:
-            dec_seg_emb_cat = dec_seg_emb
 
-        dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
-        dec_logits = self.dec_out_proj(dec_out)
+        # #decoder part
+        # vae_latent = self.reparameterize(mu, logvar)
+        # vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
 
-        return mu, logvar, dec_logits
+        # dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(vae_latent.device)
+        # for n in range(dec_inp.size(1)):
+        #     # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
+        #     # -- stores [[start idx of bar #1, sample #1, ..., start idx of bar #K, sample #1, seqlen of sample #1], [same for another sample], ...]
+        #     for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
+        #         dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
+
+        # if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
+        #     dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
+        #     dec_polyph_emb = self.polyph_attr_emb(polyph_cls)
+        #     dec_seg_emb_cat = torch.cat([dec_seg_emb, dec_rfreq_emb, dec_polyph_emb], dim=-1)
+        # else:
+        #     dec_seg_emb_cat = dec_seg_emb
+
+        # dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
+        # dec_logits = self.dec_out_proj(dec_out)
+
+        # return mu, logvar, dec_logits
 
 
     # class text_encoder(BertPreTrainedModel):
