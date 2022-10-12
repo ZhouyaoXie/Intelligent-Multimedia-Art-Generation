@@ -76,7 +76,7 @@ def _train():
     # # need to get from true dataloader 
     # config.n_token = 333
 
-    model = MusicCLIP(music_config, text_config)
+    model = MusicCLIP(music_config, text_args)
     print(model.state_dict().keys())
 
     model.to(device)
