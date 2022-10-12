@@ -10,7 +10,7 @@ from .music_transformer import VAETransformerEncoder, VAETransformerDecoder
 from .music_encoder_utils import (
     TokenEmbedding, PositionalEncoding, weights_init
 )
-from .text_encoder import BertLayer, BertConfig , BertEmbeddings, BertAttention, BertAttOutput, BertCrossattLayer, BertSelfattLayer, BertIntermediate, BertOutput, BertPreTrainedModel
+from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel
 from .cross_attn import MusicClIPXLayer
 
 
@@ -107,14 +107,14 @@ class MusicCLIP(BertPreTrainedModel):
     def encode_music(self, 
         enc_inp, 
         dec_inp, 
-        dec_inp_bar_pos, 
-        rfreq_cls=None, 
-        polyph_cls=None, 
+        # dec_inp_bar_pos, 
+        # rfreq_cls=None, 
+        # polyph_cls=None, 
         padding_mask=None,
-        use_attr_cls=True,
+        # use_attr_cls=True,
     ):
         # [shape of enc_inp] (seqlen_per_bar, bsize, n_bars_per_sample)
-        enc_bt_size, enc_n_bars = enc_inp.size(1), enc_inp.size(2)
+        # enc_bt_size, enc_n_bars = enc_inp.size(1), enc_inp.size(2)
         enc_token_emb = self.token_emb(enc_inp)
 
         # [shape of dec_inp] (seqlen_per_sample, bsize)
@@ -134,7 +134,6 @@ class MusicCLIP(BertPreTrainedModel):
             padding_mask = padding_mask.reshape(-1, padding_mask.size(-1))
 
         music_feats , music_feats_hidden, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
-        # music_feats = np.concat(mu, logvar)
         return music_feats
 
 
@@ -164,7 +163,7 @@ class MusicCLIP(BertPreTrainedModel):
 
 
     # class text_encoder(BertPreTrainedModel):
-    #     def __init__(self, config):
+    #     def __init__(self, configs):
     #         super().__init__()
     #         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_bert_layers)])
 

@@ -206,6 +206,7 @@ if __name__ == "__main__":
   print ('[sampled pieces]', pieces)
   
   mconf = config['model']
+  # DSET needed for vocab_size (just hardcode it)
   model = MuseMorphose(
     mconf['enc_n_layer'], mconf['enc_n_head'], mconf['enc_d_model'], mconf['enc_d_ff'],
     mconf['dec_n_layer'], mconf['dec_n_head'], mconf['dec_d_model'], mconf['dec_d_ff'],
@@ -222,6 +223,7 @@ if __name__ == "__main__":
   times = []
   for p in pieces:
     # fetch test sample
+    # DSET dependent: p_data, p_id, p_bar_id, orig_p_cls_str, orig_r_cls_str, orig_song, orig_tempo
     p_data = dset[p]
     p_id = p_data['piece_id']
     p_bar_id = p_data['st_bar_id']
@@ -252,6 +254,7 @@ if __name__ == "__main__":
       else:
         p_data[k] = p_data[k].to(device)
 
+    # DESET needed: pass input into encoder to get mu, var; then sample from latent to get p_latents
     p_latents = get_latent_embedding_fast(
                   model, p_data, 
                   use_sampling=config['generate']['use_latent_sampling'],
@@ -262,6 +265,7 @@ if __name__ == "__main__":
 
     piece_entropies = []
     for samp in range(n_samples_per_piece):
+      # DSET needed: won't need these lines if we do not control the attributes
       p_polyph_cls = (p_data['polyph_cls_bar'] + p_cls_diff[samp]).clamp(0, 7).long()
       p_rfreq_cls = (p_data['rhymfreq_cls_bar'] + r_cls_diff[samp]).clamp(0, 7).long()
 
@@ -279,6 +283,9 @@ if __name__ == "__main__":
       # print (p_polyph_cls, p_rfreq_cls)
 
       # generate
+      # DSET: p_latents becomes dec_seg_emb to be pass into model.generate, which then becomes
+      # seg_emb, which is input to the decoder forward method
+      # DSET: event2idx and idx2event comes from vocab file
       song, t_sec, entropies = generate_on_latent_ctrl_vanilla_truncate(
                                   model, p_latents, p_rfreq_cls, p_polyph_cls, dset.event2idx, dset.idx2event,
                                   max_input_len=config['generate']['max_input_dec_seqlen'], 

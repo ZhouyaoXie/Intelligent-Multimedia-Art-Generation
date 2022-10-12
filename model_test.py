@@ -6,25 +6,26 @@ from torch.utils.data import DataLoader
 # import module from the same directory
 from model.music_transformer import MusicConfig
 from model.model import MusicCLIP
+from dataloader.dataloader_updated import get_dataloader
 
-print("importing module...")
-# import module from parent directory
-appended_path = ""
-print(sys.path)
-delimiter = "/" if "/" in sys.path[0] else "\\"
-for path in sys.path:
-    if "Intelligent-Multimedia-Art-Generation{d}model".format(
-        d=delimiter
-    ) in path:
-        appended_path = '{path}{d}..'.format(
-            path=path,
-            d=delimiter
-        )
-        break
-sys.path.append(appended_path)
-from musemorphose.dataloader import REMIFullSongTransformerDataset
-from musemorphose.utils import pickle_load
-sys.path.remove(appended_path)
+# print("importing module...")
+# # import module from parent directory
+# appended_path = ""
+# print(sys.path)
+# delimiter = "/" if "/" in sys.path[0] else "\\"
+# for path in sys.path:
+#     if "Intelligent-Multimedia-Art-Generation{d}model".format(
+#         d=delimiter
+#     ) in path:
+#         appended_path = '{path}{d}..'.format(
+#             path=path,
+#             d=delimiter
+#         )
+#         break
+# sys.path.append(appended_path)
+# from musemorphose.dataloader import REMIFullSongTransformerDataset
+# from musemorphose.utils import pickle_load
+# sys.path.remove(appended_path)
 
 print("loading config...")
 config_path = "config/default.yaml"
@@ -40,35 +41,20 @@ kl_raw_ema = 0.
 # for testing purpose just hardcode this value
 vocab_size = 333
 
-
 def test_dataloader(config):
-    # load MuseMorphose REMI dataset for testing
-    dset = REMIFullSongTransformerDataset(
-        config['data']['data_dir'], config['data']['vocab_path'],
-        do_augment=True,
-        model_enc_seqlen=config['data']['enc_seqlen'],
-        model_dec_seqlen=config['data']['dec_seqlen'],
-        model_max_bars=config['data']['max_bars'],
-        pieces=pickle_load(config['data']['train_split']),
-        pad_to_same=True
-    )
-    dset_val = REMIFullSongTransformerDataset(
-        config['data']['data_dir'], config['data']['vocab_path'],
-        do_augment=False,
-        model_enc_seqlen=config['data']['enc_seqlen'],
-        model_dec_seqlen=config['data']['dec_seqlen'],
-        model_max_bars=config['data']['max_bars'],
-        pieces=pickle_load(config['data']['val_split']),
-        pad_to_same=True
-    )
-    print('[info]', '# training samples:', len(dset.pieces))
+    train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(config)
+    print("Printing example of train_dloader output...")
+    for i, batch in enumerate(train_dloader):
+        for k, v in batch.items():
+            if torch.is_tensor(v):
+                print (k, ':', v.dtype, v.size())
+            else:
+                print(k, ':', v)
+            break
+        print ('=====================================\n')
+        if i == 5: break
 
-    dloader = DataLoader(
-        dset, batch_size=config['data']['batch_size'], shuffle=True, num_workers=8)
-    dloader_val = DataLoader(
-        dset_val, batch_size=config['data']['batch_size'], shuffle=True, num_workers=8)
-
-    return dset, dset_val, dloader, dloader_val
+    return train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader
 
 
 def test_forward(dloader, num_to_test):
@@ -118,10 +104,10 @@ if __name__ == "__main__":
     # test dataloader
     print("testing dataloader...")
     data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-    dset, dset_val, dloader, dloader_val = test_dataloader(data_config)
+    train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = test_dataloader(data_config)
 
     # need to get from true dataloader 
     config.n_token = 333
 
     model = MusicCLIP(config)
-    print(model.state_dict().keys())
+    # print(model.state_dict().keys())

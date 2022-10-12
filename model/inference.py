@@ -1,3 +1,39 @@
+from copy import deepcopy
+import time
+import numpy as np
+import torch
+from torch import nn
+import os, sys
+from typing import Optional, Tuple
+import yaml 
+from scipy.stats import entropy
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+from .music_transformer import VAETransformerEncoder, VAETransformerDecoder 
+from .music_encoder_utils import (
+    TokenEmbedding, PositionalEncoding, weights_init
+)
+from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel
+from .cross_attn import MusicClIPXLayer
+from .utils import nucleus, pickle_load, numpy_to_tensor, temperatured_softmax, tensor_to_numpy, get_beat_idx, word2event
+from .remi2midi import remi2midi
+
+
+config_path = "config/default.yaml"
+config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+
+device = config['training']['device']
+vocab_path = config['data']['vocab_path']
+use_attr_cls = config['model']['use_attr_cls']
+
+vocab = pickle_load(vocab_path)[0]
+idx2event = pickle_load(vocab_path)[1]
+vocab_size = len(vocab)
+event2idx = vocab
+
+out_dir = config['generate']['out_dir']
 
 class MusicCLIP(BertPreTrainedModel):
     def __init__(
@@ -90,13 +126,22 @@ class MusicCLIP(BertPreTrainedModel):
         self.gradient_checkpointing = False
 
 
-    def decode_music(self):
+    def decode_music(
+        self, 
+        dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls,
+        enc_bt_size = config['data']['enc_seqlen'], 
+        enc_n_bars = config['data']['max_bars'], 
+    ):
         #decoder part
         mu = 0
         logvar = 1
         vae_latent = self.reparameterize(mu, logvar)
+        # enc_bt_size & enc_n_bars come from: enc_inp.size(1), enc_inp.size(2)
+        # enc_inp is 'enc_input' in dataset
+        # its length should be self.model_enc_seqlen
         vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
 
+        # [shape of dec_inp] (seqlen_per_sample, bsize)
         dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(vae_latent.device)
         for n in range(dec_inp.size(1)):
             # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
@@ -150,7 +195,9 @@ class MusicCLIP(BertPreTrainedModel):
         # #     polyph_cls,
         # #     padding_mask
 
-        music_feats, dec_logits, mu, logvar = self.decode_music()
+        music_feats, dec_logits, mu, logvar = self.decode_music(
+            dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
+        )
 
 
         # music_feats = self.music_decoer()
@@ -193,9 +240,113 @@ class MusicCLIP(BertPreTrainedModel):
         mu = 0
         logvar =1 
         mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
-        vae_latent = self.reparameterize(mu, logvar, use_sampling=use_sampling, sampling_var=sampling_var)
+        vae_latent = self.reparameterize(mu, logvar, sampling_var=sampling_var)
 
         return vae_latent
+
+    def generate_on_latent_ctrl_vanilla_truncate(self, 
+        latents, event2idx, idx2event, 
+        rfreq_cls = None, polyph_cls = None, 
+        max_events=12800, primer=None,
+        max_input_len=1280, truncate_len=512, 
+        nucleus_p=0.9, temperature=1.2
+      ):
+        latent_placeholder = torch.zeros(max_events, 1, latents.size(-1)).to(device)
+        rfreq_placeholder = torch.zeros(max_events, 1, dtype=int).to(device)
+        polyph_placeholder = torch.zeros(max_events, 1, dtype=int).to(device)
+        print ('[info] rhythm cls: {} | polyph_cls: {}'.format(rfreq_cls, polyph_cls))
+
+        if primer is None:
+            generated = [event2idx['Bar_None']]
+        else:
+            generated = [event2idx[e] for e in primer]
+            latent_placeholder[:len(generated), 0, :] = latents[0].squeeze(0)
+            rfreq_placeholder[:len(generated), 0] = rfreq_cls[0]
+            polyph_placeholder[:len(generated), 0] = polyph_cls[0]
+            
+        target_bars, generated_bars = latents.size(0), 0
+
+        steps = 0
+        time_st = time.time()
+        cur_pos = 0
+        failed_cnt = 0
+
+        cur_input_len = len(generated)
+        generated_final = deepcopy(generated)
+        entropies = []
+
+        while generated_bars < target_bars:
+            if len(generated) == 1:
+                dec_input = numpy_to_tensor([generated], device=device).long()
+            else:
+                dec_input = numpy_to_tensor([generated], device=device).permute(1, 0).long()
+
+            latent_placeholder[len(generated)-1, 0, :] = latents[ generated_bars ]
+            rfreq_placeholder[len(generated)-1, 0] = rfreq_cls[ generated_bars ]
+            polyph_placeholder[len(generated)-1, 0] = polyph_cls[ generated_bars ]
+
+            dec_seg_emb = latent_placeholder[:len(generated), :]
+            dec_rfreq_cls = rfreq_placeholder[:len(generated), :]
+            dec_polyph_cls = polyph_placeholder[:len(generated), :]
+
+            # sampling
+            with torch.no_grad():
+                logits = self.generate(dec_input, dec_seg_emb, dec_rfreq_cls, dec_polyph_cls)
+                logits = tensor_to_numpy(logits[0])
+                probs = temperatured_softmax(logits, temperature)
+                word = nucleus(probs, nucleus_p)
+                word_event = idx2event[word]
+
+            if 'Beat' in word_event:
+                event_pos = get_beat_idx(word_event)
+            if not event_pos >= cur_pos:
+                failed_cnt += 1
+                print ('[info] position not increasing, failed cnt:', failed_cnt)
+                if failed_cnt >= 128:
+                    print ('[FATAL] model stuck, exiting ...')
+                    return generated
+                continue
+            else:
+                cur_pos = event_pos
+                failed_cnt = 0
+
+            if 'Bar' in word_event:
+                generated_bars += 1
+                cur_pos = 0
+                print ('[info] generated {} bars, #events = {}'.format(generated_bars, len(generated_final)))
+            if word_event == 'PAD_None':
+                continue
+
+            if len(generated) > max_events or (word_event == 'EOS_None' and generated_bars == target_bars - 1):
+                generated_bars += 1
+                generated.append(event2idx['Bar_None'])
+                print ('[info] gotten eos')
+                break
+
+            generated.append(word)
+            generated_final.append(word)
+            entropies.append(entropy(probs))
+
+            cur_input_len += 1
+            steps += 1
+
+            assert cur_input_len == len(generated)
+            if cur_input_len == max_input_len:
+                generated = generated[-truncate_len:]
+                latent_placeholder[:len(generated)-1, 0, :] = latent_placeholder[cur_input_len-truncate_len:cur_input_len-1, 0, :]
+                rfreq_placeholder[:len(generated)-1, 0] = rfreq_placeholder[cur_input_len-truncate_len:cur_input_len-1, 0]
+                polyph_placeholder[:len(generated)-1, 0] = polyph_placeholder[cur_input_len-truncate_len:cur_input_len-1, 0]
+
+                print ('[info] reset context length: cur_len: {}, accumulated_len: {}, truncate_range: {} ~ {}'.format(
+                    cur_input_len, len(generated_final), cur_input_len-truncate_len, cur_input_len-1
+                ))
+                cur_input_len = len(generated)
+
+        assert generated_bars == target_bars
+        print ('-- generated events:', len(generated_final))
+        print ('-- time elapsed: {:.2f} secs'.format(time.time() - time_st))
+        return generated_final[:-1], time.time() - time_st, np.array(entropies)
+
 
     def generate(self, inp, dec_seg_emb, rfreq_cls=None, polyph_cls=None, keep_last_only=True):
         token_emb = self.token_emb(inp)
@@ -215,3 +366,46 @@ class MusicCLIP(BertPreTrainedModel):
             out = out[-1, ...]
 
         return out
+
+
+    def generate_music(self, n_pieces = 1, rfreq_cls=None, polyph_cls=None, keep_last_only=True):
+        times = []
+        piece_entropies = []
+        for p in range(n_pieces):
+            out_file = os.path.join(out_dir, 'id{}_poly{}_rhym{}'.format(
+                p, "None" if rfreq_cls is None else rfreq_cls, "None" if polyph_cls is None else polyph_cls
+            ))      
+            print ('[info] writing to ...', out_file)
+            if os.path.exists(out_file + '.txt'):
+                print ('[info] file exists, skipping ...')
+                continue
+
+            p_latents = self.get_sampled_latent_inference()
+            song, t_sec, entropies = self.generate_on_latent_ctrl_vanilla_truncate(
+                                        p_latents, event2idx, idx2event,
+                                        p_rfreq_cls = None, p_polyph_cls = None, 
+                                        max_input_len=config['generate']['max_input_dec_seqlen'], 
+                                        truncate_len=min(512, config['generate']['max_input_dec_seqlen'] - 32), 
+                                        nucleus_p=config['generate']['nucleus_p'], 
+                                        temperature=config['generate']['temperature']
+                                    )
+            times.append(t_sec)
+
+            song = word2event(song, idx2event)
+            print (*song, sep='\n', file=open(out_file + '.txt', 'a'))
+            remi2midi(song, out_file + '.mid', enforce_tempo=True)
+
+            # save metadata of the generation
+            # np.save(out_file + '-POLYCLS.npy', tensor_to_numpy(p_polyph_cls))
+            # np.save(out_file + '-RHYMCLS.npy', tensor_to_numpy(p_rfreq_cls))
+            print ('[info] piece entropy: {:.4f} (+/- {:.4f})'.format(
+                entropies.mean(), entropies.std()
+            ))
+            piece_entropies.append(entropies.mean())
+
+        print ('[time stats] {} songs, generation time: {:.2f} secs (+/- {:.2f})'.format(
+            n_pieces, np.mean(times), np.std(times)
+        ))
+        print ('[entropy] {:.4f} (+/- {:.4f})'.format(
+            np.mean(piece_entropies), np.std(piece_entropies)
+        ))

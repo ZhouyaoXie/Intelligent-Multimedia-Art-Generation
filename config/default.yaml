@@ -34,6 +34,7 @@ model:
     pretrained_params_path:      musemorphose_pretrained_weights.pt
     pretrained_optim_path:       null
     num_bert_layers:    6
+    use_attr_cls:     False
 
 training:
     device:           cuda:0
@@ -55,6 +56,7 @@ training:
     mode:   TRAIN
 
 generate:
+    out_dir:                    outputs/
     temperature:                1.2
     nucleus_p:                  0.9
     use_latent_sampling:        False
