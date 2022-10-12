@@ -26,6 +26,7 @@ config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
 device = config['training']['device']
 vocab_path = config['data']['vocab_path']
+use_attr_cls = config['model']['use_attr_cls']
 
 vocab = pickle_load(vocab_path)[0]
 idx2event = pickle_load(vocab_path)[1]
@@ -127,6 +128,7 @@ class MusicCLIP(BertPreTrainedModel):
 
     def decode_music(
         self, 
+        dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls,
         enc_bt_size = config['data']['enc_seqlen'], 
         enc_n_bars = config['data']['max_bars'], 
     ):
@@ -193,7 +195,9 @@ class MusicCLIP(BertPreTrainedModel):
         # #     polyph_cls,
         # #     padding_mask
 
-        music_feats, dec_logits, mu, logvar = self.decode_music()
+        music_feats, dec_logits, mu, logvar = self.decode_music(
+            dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
+        )
 
 
         # music_feats = self.music_decoer()
