@@ -184,8 +184,6 @@ class MusicCLIP(BertPreTrainedModel):
         
         """
         # Run music embedding layer
-        # Note: Word embedding layer was executed outside this module.
-        #       Keep this design to allow loading BERT weights.
 
         # music = get_sample_latent_generator(mu_0, logvar_0)
         # # enc_inp, 
@@ -198,9 +196,6 @@ class MusicCLIP(BertPreTrainedModel):
         music_feats, dec_logits, mu, logvar = self.decode_music(
             dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
         )
-
-
-        # music_feats = self.music_decoer()
 
         # Run language layers
         for layer_module in self.layer:

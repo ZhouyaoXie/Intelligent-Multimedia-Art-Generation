@@ -72,10 +72,7 @@ music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
 def _train():
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
-    
-
-    # # need to get from true dataloader 
-    # config.n_token = 333
+    music_config.n_token = train_dset.vocab_size   # 333
 
     model = MusicCLIP(music_config, text_config)
     print(model.state_dict().keys())
