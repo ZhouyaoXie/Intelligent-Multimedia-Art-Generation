@@ -60,15 +60,6 @@ class MusicCLIPInfer(BertPreTrainedModel):
         # self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
         # self.pe = PositionalEncoding(config.d_embed)
         self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
-        # self.encoder = VAETransformerEncoder(
-        #     config.enc_n_layer, 
-        #     config.enc_n_head, 
-        #     config.enc_d_model, 
-        #     config.enc_d_ff, 
-        #     config.d_latent, 
-        #     config.enc_dropout, 
-        #     config.enc_activation
-        # )
 
         if config.use_attr_cls:
             self.decoder = VAETransformerDecoder(
@@ -106,12 +97,7 @@ class MusicCLIPInfer(BertPreTrainedModel):
             self.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
         else:
             weights_init(self)
-
-    def _init_bert_from_config(self, config):
-        # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
-        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
-        self.gradient_checkpointing = False
-
+            
 
     def decode_music(
         self, 
@@ -189,7 +175,7 @@ class MusicCLIPInfer(BertPreTrainedModel):
             lang_feats, lang_attention_mask = layer_module(lang_feats, lang_attention_mask)
 
         # Run cross-modality layers
-        for layer_module in self.x_layers:
+        for layer_module in self.model.x_layers:
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
 
