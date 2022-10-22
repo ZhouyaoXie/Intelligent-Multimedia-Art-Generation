@@ -72,6 +72,7 @@ music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 model_out_path = music_config['model']['output_path']
 bs = music_config["batch_size"]
 epochs = music_config['training']['max_epochs']
+lr = music_config['training']['max_lr']
 
 
 def _train(music_config, text_args):
@@ -82,7 +83,7 @@ def _train(music_config, text_args):
     print(model.state_dict().keys())
 
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay = 5e-4)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay = 5e-4)
     c_loss = ContrastiveLoss(bs)
 
     model.zero_grad()
@@ -122,10 +123,20 @@ def _train(music_config, text_args):
             print("loss", loss.item())
             #training accuracy
 
-            # save model 
-            torch.save(model.state_dict(), model_out_path + "epoch{}_bs{}.pt".format(
-                epoch = epochs, bs = bs,
-            ))
+        # save model checkpoint after every epoch
+        torch.save({'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss}, 
+            model_out_path + 'model_epoch{epoch}_bs{bs}_lr{lr}_ckpt_epoch{curr_epoch}.pth'.format(
+                epoch = epochs, bs = bs, lr = lr, curr_epoch = epoch
+            )
+        )
+
+    # save model 
+    torch.save(model.state_dict(), model_out_path + "epoch{epoch}_bs{bs}_lr{lr}.pt".format(
+        epoch = epochs, bs = bs, lr = lr,
+    ))
 
 
 def _inf(music_config, text_args, model_save_path = None):
@@ -134,9 +145,9 @@ def _inf(music_config, text_args, model_save_path = None):
     music_config.n_token = train_dset.vocab_size   # 333
     model = MusicCLIP(music_config, text_args)
     if model_save_path is None:
-        model_save_path = model_out_path + "epoch{}_bs{}.pt".format(
-                epoch = epochs, bs = bs,
-            )
+        model_save_path = model_out_path + "epoch{epoch}_bs{bs}_lr{lr}.pt".format(
+            epoch = epochs, bs = bs, lr = lr,
+        )
     model.load_state_dict(torch.load(model_save_path))
     model.eval()
     infer_model = MusicCLIPInfer(model, music_config, text_args)
