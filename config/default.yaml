@@ -58,6 +58,8 @@ training:
     val_interval:     50
     mode:   TRAIN
     output_path:      outputs/
+    max_inference_epoch:  100
+    max_inference_loss:   0.01
 
 generate:
     out_dir:                    outputs/

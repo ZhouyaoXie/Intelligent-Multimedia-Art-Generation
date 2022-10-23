@@ -97,7 +97,7 @@ class MusicCLIPInfer(BertPreTrainedModel):
             self.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
         else:
             weights_init(self)
-            
+
 
     def decode_music(
         self, 
@@ -143,44 +143,32 @@ class MusicCLIPInfer(BertPreTrainedModel):
 
     def forward(
         self,
-        lang_feats,
-        lang_attention_mask,
-        enc_inp, 
+        text,
         dec_inp, 
         dec_inp_bar_pos, 
         rfreq_cls=None, 
         polyph_cls=None, 
-        padding_mask=None,
         music_attention_mask = None,
+        token_type_ids = None,
     ):
         """ Adapted from https://github.com/airsplay/lxmert/blob/master/src/lxrt/modeling.py#L546
         
         """
-        # Run music embedding layer
-
-        # music = get_sample_latent_generator(mu_0, logvar_0)
-        # # enc_inp, 
-        # #     dec_inp, 
-        # #     dec_inp_bar_pos, 
-        # #     rfreq_cls, 
-        # #     polyph_cls,
-        # #     padding_mask
-
+        # generate music
         music_feats, dec_logits, mu, logvar = self.decode_music(
             dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
         )
-
-        # Run language layers
-        for layer_module in self.layer:
-            lang_feats, lang_attention_mask = layer_module(lang_feats, lang_attention_mask)
-
+        # encode text input
+        lang_feats, lang_attention_mask = self.model.encode_text(
+            text, token_type_ids
+        )
         # Run cross-modality layers
         for layer_module in self.model.x_layers:
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
-
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         pooled_output = self.pooler(lang_feats)
+        
         return lang_feats, music_feats , pooled_output
  
 

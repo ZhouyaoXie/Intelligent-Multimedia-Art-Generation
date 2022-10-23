@@ -108,52 +108,14 @@ class MusicCLIP(BertPreTrainedModel):
         return music_feats
 
 
-    # class text_encoder(BertPreTrainedModel):
-    #     def __init__(self, configs):
-    #         super().__init__()
-    #         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_bert_layers)])
-
-    #     def forward(self, lang_feats, lang_attention_mask):
-    #         for layer_module in self.layer:
-    #             lang_feats = layer_module(lang_feats, lang_attention_mask)
-    #         return lang_feats, lang_attention_mask
-
-    # def text_encoder(self, lang_feats, lang_attention_mask):
-    #     for layer_module in self.layer:
-    #         lang_feats = layer_module(lang_feats, lang_attention_mask)
-    #     return lang_feats, lang_attention_mask
-
-
-    def forward(
+    def encode_text(
         self,
         sents,
-        enc_inp, 
-        dec_inp, 
-        dec_inp_bar_pos, 
-        rfreq_cls=None, 
-        polyph_cls=None, 
-        padding_mask=None,
-        music_attention_mask = None,
         token_type_ids = None
     ):
-        """ Adapted from https://github.com/airsplay/lxmert/blob/master/src/lxrt/modeling.py#L546
-        
-        """
-        # Run music embedding layer
-        # Note: Word embedding layer was executed outside this module.
-        #       Keep this design to allow loading BERT weights.
-        music_feats = self.encode_music(
-            enc_inp, 
-            dec_inp, 
-            dec_inp_bar_pos, 
-            rfreq_cls, 
-            polyph_cls,
-            padding_mask
-        )
-
-
         train_features = convert_sents_to_features(
-            sents, self.max_seq_length, self.tokenizer)
+            sents, self.max_seq_length, self.tokenizer
+        )
 
         input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long).cuda()
         input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).cuda()
@@ -175,6 +137,40 @@ class MusicCLIP(BertPreTrainedModel):
         lang_attention_mask = (1.0 - extended_attention_mask) * -10000.0
 
         lang_feats = self.embeddings(input_ids, segment_ids)
+
+        return lang_feats, lang_attention_mask
+
+
+    def forward(
+        self,
+        sents,
+        enc_inp, 
+        dec_inp, 
+        dec_inp_bar_pos, 
+        rfreq_cls=None, 
+        polyph_cls=None, 
+        padding_mask=None,
+        music_attention_mask = None,
+        token_type_ids = None
+    ):
+        """ Adapted from https://github.com/airsplay/lxmert/blob/master/src/lxrt/modeling.py#L546
+        
+        """
+        # Run music embedding layer
+        music_feats = self.encode_music(
+            enc_inp, 
+            dec_inp, 
+            dec_inp_bar_pos, 
+            rfreq_cls, 
+            polyph_cls,
+            padding_mask
+        )
+
+        # encode text
+        lang_feats, lang_attention_mask = self.encode_text(
+            sents,
+            token_type_ids
+        )
         # Run language layers
         for layer_module in self.layer:
             lang_feats, lang_attention_mask = layer_module(lang_feats, lang_attention_mask)
@@ -186,7 +182,8 @@ class MusicCLIP(BertPreTrainedModel):
 
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         pooled_output = self.pooler(lang_feats)
-        return lang_feats, music_feats , pooled_output
+
+        return lang_feats, music_feats , pooled_output, lang_attention_mask
 
 
 def convert_sents_to_features(sents, max_seq_length, tokenizer):
