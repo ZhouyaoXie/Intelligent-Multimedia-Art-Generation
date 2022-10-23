@@ -44,21 +44,16 @@ class MusicCLIPInfer(BertPreTrainedModel):
     ):
         super().__init__()
         self.model = model
+        # freeze MusicCLIP weights during inference
+        for param in self.model.parameters():
+            param.requires_grad = False
         self.music_config = music_config 
         self.config = text_config
-
-        # cross attention layers are in the encoder object that is passed in
-        # self.num_x_layers = music_config.num_x_layers
-        # self.x_layers = nn.ModuleList(
-        #     [MusicClIPXLayer(text_config) for _ in range(self.num_x_layers)]
-        # )
 
         self._init_music_decoder_from_config(music_config)
 
 
     def _init_music_decoder_from_config(self, config):
-        # self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
-        # self.pe = PositionalEncoding(config.d_embed)
         self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
 
         if config.use_attr_cls:
