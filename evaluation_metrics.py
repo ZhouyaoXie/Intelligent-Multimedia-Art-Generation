@@ -57,20 +57,25 @@ def get_pitch_stats(song_remi_events):
   return stats
 
 # idea reference: MuseGAN
-def pitches_per_bar(song_remi_events):
+def pitches_n_chords_per_bar(song_remi_events):
     """Return the number of unique pitches used per bar."""
-    total_unique_pitches = set()
-    unique_pitches_per_bar = []
+    total_unique_pitches_n_chords = set()
+    unique_pitches_n_chords_per_bar = []
     for idx in range(len(song_remi_events)):
       remi_event = song_remi_events[idx]
       if remi_event["name"] == "Bar":
         if idx != 0:
-          unique_pitches_per_bar.append(len(pitches_curr_bar))
-        pitches_curr_bar = set()
+          unique_pitches_n_chords_per_bar.append(len(pitches_n_chords_curr_bar))
+        pitches_n_chords_curr_bar = set()
+      # unique pitches
       if remi_event["name"] == "Note_Pitch":
-        total_unique_pitches.add(remi_event["value"])
-        pitches_curr_bar.add(remi_event["value"])
-    return unique_pitches_per_bar
+        total_unique_pitches_n_chords.add(remi_event["value"])
+        pitches_n_chords_curr_bar.add(remi_event["value"])
+      # unique chords
+      if remi_event["name"] == "Chord":
+        total_unique_pitches_n_chords.add(remi_event["value"])
+        pitches_n_chords_curr_bar.add(remi_event["value"])
+    return unique_pitches_n_chords_per_bar
 
 
 """Rhythm related"""
