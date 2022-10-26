@@ -10,6 +10,7 @@ from model.model import MusicCLIP
 
 from dataloader.dataloader_updated import get_dataloader
 
+from config.text_config import text_args
 from model.inference import MusicCLIPInfer
 from .contrastive_loss import ContrastiveLoss
 
