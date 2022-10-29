@@ -1,12 +1,11 @@
 import torch
 from torch import nn
 import os, sys
-from typing import Optional, Tuple
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from .music_transformer import VAETransformerEncoder, VAETransformerDecoder 
+from .music_transformer import VAETransformerEncoder 
 from .music_encoder_utils import (
     TokenEmbedding, PositionalEncoding, weights_init
 )
@@ -16,7 +15,7 @@ from .tokenization import BertTokenizer
 
 
 
-class MusicCLIP(BertPreTrainedModel):
+class MusicCLIP(torch.nn.Module):
     def __init__(
         self,
         music_config,
@@ -30,7 +29,7 @@ class MusicCLIP(BertPreTrainedModel):
         self._init_music_encoder_from_config(music_config)
 
         # initialize cross attention layers
-        self.num_x_layers = music_config.num_x_layers
+        self.num_x_layers = music_config['x_attention']['num_x_layers']
         self.x_layers = nn.ModuleList(
             [MusicClIPXLayer(text_config) for _ in range(self.num_x_layers)]
         )
@@ -48,30 +47,30 @@ class MusicCLIP(BertPreTrainedModel):
         self._init_bert_from_config(text_config)
 
 
-    def _init_music_transformer_from_config(self, config):
-        self.token_emb = TokenEmbedding(config.n_token, config.d_embed, config.enc_d_model)
-        self.pe = PositionalEncoding(config.d_embed)
-        # self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
+    def _init_music_encoder_from_config(self, config):
+        self.token_emb = TokenEmbedding(config['n_token'], config['model']['d_embed'], config['model']['enc_d_model'])
+        self.pe = PositionalEncoding(config['model']['d_embed'])
+        # self.dec_out_proj = nn.Linear(config['model']['dec_d_model'], config['n_token'])
         self.encoder = VAETransformerEncoder(
-            config.enc_n_layer, 
-            config.enc_n_head, 
-            config.enc_d_model, 
-            config.enc_d_ff, 
-            config.d_latent, 
-            config.enc_dropout, 
-            config.enc_activation
+            config['model']['enc_n_layer'], 
+            config['model']['enc_n_head'], 
+            config['model']['enc_d_model'], 
+            config['model']['enc_d_ff'], 
+            config['model']['d_latent'], 
+            config['model'].get('enc_dropout', 0.1), 
+            config['model'].get('enc_activation', 0.1)
         )
 
-        self.emb_dropout = nn.Dropout(config.enc_dropout)
+        self.emb_dropout = nn.Dropout(config['model'].get('enc_dropout', 0.1))
 
-        if config.pretrained_params_path is not None:
-            self.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
+        if config['model']['pretrained_params_path'] is not None:
+            self.load_state_dict(torch.load(config['model']['pretrained_params_path']), strict=False)
         else:
             weights_init(self)
 
     def _init_bert_from_config(self, config):
         # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
-        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config['model']['num_bert_layers'])])
         self.gradient_checkpointing = False
 
 

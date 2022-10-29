@@ -6,10 +6,11 @@ import yaml
 import torch
 import torch.optim as optim
 
-from model.model import MusicCLIP
+from .model import MusicCLIP
 
 from dataloader.dataloader_updated import get_dataloader
 
+from .inference import MusicCLIPInfer
 from config.text_config import text_args
 from model.inference import MusicCLIPInfer
 from .contrastive_loss import ContrastiveLoss
@@ -34,8 +35,8 @@ config_path = "config/default.yaml"
 POSITIVE = 1
 
 music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-model_out_path = music_config['model']['output_path']
-bs = music_config["batch_size"]
+model_out_path = music_config['training']['output_path']
+bs = music_config["data"]["batch_size"]
 epochs = music_config['training']['max_epochs']
 lr = music_config['training']['max_lr']
 # max number of epochs to train the decoder on during inference
@@ -46,7 +47,7 @@ MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
 
 def _train(music_config, text_args):
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
-    music_config.n_token = train_dset.vocab_size   # 333
+    music_config['n_token'] = train_dset.vocab_size   # 333
 
     model = MusicCLIP(music_config, text_args)
     print(model.state_dict().keys())
@@ -166,10 +167,11 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     print("generation ended, took {}s".format(round(generate_end_time - start_time)))
 
 
-def train():
+def train(music_config, text_config = text_args):
     mode = music_config["training"]["mode"]
     if mode == "TRAIN":
-        _train()
+        assert text_config is not None 
+        _train(music_config, text_config)
     elif mode == "INFERENCE":
         _inf()
     else:

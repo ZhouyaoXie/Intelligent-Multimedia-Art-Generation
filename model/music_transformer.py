@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from .music_encoder_utils import generate_causal_mask
+from model.music_encoder_utils import generate_causal_mask
 import yaml 
 import os 
 
@@ -22,6 +22,7 @@ class MusicConfig:
         self.kl_max_beta = config['training']['kl_max_beta']
         self.free_bit_lambda = config['training']['free_bit_lambda']
         self.max_lr, self.min_lr = config['training']['max_lr'], config['training']['min_lr']
+        self.mode = config['training']['mode']
 
         self.ckpt_dir = config['training']['ckpt_dir']
         self.params_dir = os.path.join(self.ckpt_dir, 'params/')

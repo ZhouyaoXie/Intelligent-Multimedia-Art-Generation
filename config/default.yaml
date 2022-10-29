@@ -31,7 +31,8 @@ model:
     d_polyph_emb:     64
     d_rfreq_emb:      64
     cond_mode:        in-attn
-    pretrained_params_path:      musemorphose_pretrained_weights.pt
+    # pretrained_params_path:      musemorphose_pretrained_weights.pt
+    pretrained_params_path:      null
     pretrained_optim_path:       null
     num_bert_layers:    6
     use_attr_cls:     False

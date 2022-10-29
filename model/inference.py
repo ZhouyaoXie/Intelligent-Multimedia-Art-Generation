@@ -54,42 +54,42 @@ class MusicCLIPInfer(BertPreTrainedModel):
 
 
     def _init_music_decoder_from_config(self, config):
-        self.dec_out_proj = nn.Linear(config.dec_d_model, config.n_token)
+        self.dec_out_proj = nn.Linear(config['model']['dec_d_model'], config['model']['n_token'])
 
-        if config.use_attr_cls:
+        if config['model']['use_attr_cls']:
             self.decoder = VAETransformerDecoder(
-                config.dec_n_layer, 
-                config.dec_n_head, 
-                config.dec_d_model, 
-                config.dec_d_ff, 
-                config.d_latent + config.d_polyph_emb + config.d_rfreq_emb,
-                dropout = config.dec_dropout, 
-                activation = config.dec_activation,
-                cond_mode = config.cond_mode
+                config['model']['dec_n_layer'], 
+                config['model']['dec_n_head'], 
+                config['model']['dec_d_model'], 
+                config['model']['dec_d_ff'], 
+                config['model']['d_latent'] + config['model']['d_polyph_emb'] + config['model']['d_rfreq_emb'],
+                dropout = config['model']['dec_dropout'], 
+                activation = config['model']['dec_activation'],
+                cond_mode = config['model']['cond_mode']
             )
         else:
             self.decoder = VAETransformerDecoder(
-                config.dec_n_layer, 
-                config.dec_n_head, 
-                config.dec_d_model, 
-                config.dec_d_ff, 
-                config.d_latent,
-                dropout = config.dec_dropout, 
-                activation = config.dec_activation,
-                cond_mode = config.cond_mode
+                config['model']['dec_n_layer'], 
+                config['model']['dec_n_head'], 
+                config['model']['dec_d_model'], 
+                config['model']['dec_d_ff'], 
+                config['model']['d_latent'],
+                dropout = config['model'].get('dec_dropout', 0.1), 
+                activation = config['model'].get('dec_activation', 'relu'),
+                cond_mode = config['model']['cond_mode']
             )
 
-        if config.use_attr_cls:
-            self.rfreq_attr_emb = TokenEmbedding(config.n_rfreq_cls, config.d_rfreq_emb, config.d_rfreq_emb)
-            self.polyph_attr_emb = TokenEmbedding(config.n_polyph_cls, config.d_polyph_emb, config.d_polyph_emb)
+        if config['model']['use_attr_cls']:
+            self.rfreq_attr_emb = TokenEmbedding(config['model'].get('n_rfreq_cls', 8), config['model']['d_rfreq_emb'], config['model']['d_rfreq_emb'])
+            self.polyph_attr_emb = TokenEmbedding(config['model'].get('n_polyph_cls', 8), config['model']['d_polyph_emb'], config['model']['d_polyph_emb'])
         else:
             self.rfreq_attr_emb = None
             self.polyph_attr_emb = None
 
-        self.emb_dropout = nn.Dropout(config.enc_dropout)
+        self.emb_dropout = nn.Dropout(config['model'].get('dec_dropout', 0.1))
 
-        if config.pretrained_params_path is not None:
-            self.load_state_dict(torch.load(config.pretrained_params_path), strict=False)
+        if 'pretrained_params_path' not in config['model']:
+            self.load_state_dict(torch.load(config['model']['pretrained_params_path']), strict=False)
         else:
             weights_init(self)
 

@@ -12,6 +12,8 @@ from torch.autograd.grad_mode import F
 
 # NOTES: run setup.sh before running / importing this file
 
+global no_events_d
+
 IDX_TO_KEY = {
   0: 'A',
   1: 'A#',
@@ -358,10 +360,11 @@ class REMIFullSongTransformerDataset(Dataset):
 
 
 def get_dataloader(data_config):
+    global no_events_d
     # files that we do not consider because they have no events between some consecutive bars
     print("Obtaining files to drop...")
     no_events_d = {}
-    with open("no_events_fn.txt", "r") as f:
+    with open("dataloader/no_events_fn.txt", "r") as f:
       for line in f.readlines():
         fn, num = line.rstrip('\n').split()
         no_events_d[fn] = int(num)
