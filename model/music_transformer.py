@@ -5,69 +5,69 @@ import yaml
 import os 
 
 
-""" Class for reading music transformer config from yaml file """
-class MusicConfig:
-    def __init__(self, config_path = None):
-        if config_path is None:
-            config_path = "config/default.yaml"
-        config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+# """ Class for reading music transformer config from yaml file """
+# class MusicConfig:
+#     def __init__(self, config_path = None):
+#         if config_path is None:
+#             config_path = "config/default.yaml"
+#         config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
-        # training parameters
-        self.device = config['training']['device']
-        self.trained_steps = config['training']['trained_steps']
-        self.lr_decay_steps = config['training']['lr_decay_steps']
-        self.lr_warmup_steps = config['training']['lr_warmup_steps']
-        self.no_kl_steps = config['training']['no_kl_steps']
-        self.kl_cycle_steps = config['training']['kl_cycle_steps']
-        self.kl_max_beta = config['training']['kl_max_beta']
-        self.free_bit_lambda = config['training']['free_bit_lambda']
-        self.max_lr, self.min_lr = config['training']['max_lr'], config['training']['min_lr']
-        self.mode = config['training']['mode']
+#         # training parameters
+#         self.device = config['training']['device']
+#         self.trained_steps = config['training']['trained_steps']
+#         self.lr_decay_steps = config['training']['lr_decay_steps']
+#         self.lr_warmup_steps = config['training']['lr_warmup_steps']
+#         self.no_kl_steps = config['training']['no_kl_steps']
+#         self.kl_cycle_steps = config['training']['kl_cycle_steps']
+#         self.kl_max_beta = config['training']['kl_max_beta']
+#         self.free_bit_lambda = config['training']['free_bit_lambda']
+#         self.max_lr, self.min_lr = config['training']['max_lr'], config['training']['min_lr']
+#         self.mode = config['training']['mode']
 
-        self.ckpt_dir = config['training']['ckpt_dir']
-        self.params_dir = os.path.join(self.ckpt_dir, 'params/')
-        self.optim_dir = os.path.join(self.ckpt_dir, 'optim/')
+#         self.ckpt_dir = config['training']['ckpt_dir']
+#         self.params_dir = os.path.join(self.ckpt_dir, 'params/')
+#         self.optim_dir = os.path.join(self.ckpt_dir, 'optim/')
 
-        # music transformer 
-        mconf = config['model']
-        self.pretrained_params_path = mconf['pretrained_params_path']
-        self.pretrained_optim_path = mconf['pretrained_optim_path']
-        self.d_polyph_emb = mconf['d_polyph_emb']
-        self.d_rfreq_emb = mconf['d_rfreq_emb']
-        self.cond_mode = mconf['cond_mode']
-        self.n_rfreq_cls = mconf.get('n_rfreq_cls', 8)
-        self.n_polyph_cls = mconf.get('n_polyph_cls', 8)
-        self.use_attr_cls = mconf['use_attr_cls']
+#         # music transformer 
+#         mconf = config['model']
+#         self.pretrained_params_path = mconf['pretrained_params_path']
+#         self.pretrained_optim_path = mconf['pretrained_optim_path']
+#         self.d_polyph_emb = mconf['d_polyph_emb']
+#         self.d_rfreq_emb = mconf['d_rfreq_emb']
+#         self.cond_mode = mconf['cond_mode']
+#         self.n_rfreq_cls = mconf.get('n_rfreq_cls', 8)
+#         self.n_polyph_cls = mconf.get('n_polyph_cls', 8)
+#         self.use_attr_cls = mconf['use_attr_cls']
 
-        # music encoder 
-        self.enc_n_layer = mconf['enc_n_layer']
-        self.enc_n_head = mconf['enc_n_head']
-        self.enc_d_model = mconf['enc_d_model']
-        self.enc_d_ff = mconf['enc_d_ff']
-        self.enc_dropout = mconf.get('enc_dropout', 0.1)
-        self.enc_activation = mconf.get('enc_activation', 'relu')
+#         # music encoder 
+#         self.enc_n_layer = mconf['enc_n_layer']
+#         self.enc_n_head = mconf['enc_n_head']
+#         self.enc_d_model = mconf['enc_d_model']
+#         self.enc_d_ff = mconf['enc_d_ff']
+#         self.enc_dropout = mconf.get('enc_dropout', 0.1)
+#         self.enc_activation = mconf.get('enc_activation', 'relu')
 
 
-        # music decoder 
-        self.dec_n_layer = mconf['dec_n_layer']
-        self.dec_n_head = mconf['dec_n_head']
-        self.dec_d_model = mconf['dec_d_model']
-        self.dec_d_ff = mconf['dec_d_ff']
-        self.d_latent = mconf['d_latent']
-        self.d_embed = mconf['d_embed']
-        self.dec_dropout = mconf.get('dec_dropout', 0.1)
-        self.dec_activation = mconf.get('dec_activation', 'relu')
+#         # music decoder 
+#         self.dec_n_layer = mconf['dec_n_layer']
+#         self.dec_n_head = mconf['dec_n_head']
+#         self.dec_d_model = mconf['dec_d_model']
+#         self.dec_d_ff = mconf['dec_d_ff']
+#         self.d_latent = mconf['d_latent']
+#         self.d_embed = mconf['d_embed']
+#         self.dec_dropout = mconf.get('dec_dropout', 0.1)
+#         self.dec_activation = mconf.get('dec_activation', 'relu')
 
-        # cross_attention
-        self.num_x_layers = config['x_attention']['num_x_layers']
+#         # cross_attention
+#         self.num_x_layers = config['x_attention']['num_x_layers']
 
-        # training
-        self.ckpt_interval = config['training']['ckpt_interval']
-        self.log_interval = config['training']['log_interval']
-        self.val_interval = config['training']['val_interval']
-        self.constant_kl = config['training']['constant_kl']
+#         # training
+#         self.ckpt_interval = config['training']['ckpt_interval']
+#         self.log_interval = config['training']['log_interval']
+#         self.val_interval = config['training']['val_interval']
+#         self.constant_kl = config['training']['constant_kl']
 
-        self.config = config 
+#         self.config = config 
 
 
 """ Class for a transformer encoder """
@@ -88,7 +88,7 @@ class VAETransformerEncoder(nn.Module):
     self.d_model = d_model
     self.d_ff = d_ff
     self.d_vae_latent = d_vae_latent
-    self.dropout = dropout
+    self.enc_dropout = dropout
     self.activation = activation
 
     self.tr_encoder_layer = nn.TransformerEncoderLayer(
@@ -117,7 +117,7 @@ class VAETransformerDecoder(nn.Module):
     self.d_model = d_model
     self.d_ff = d_ff
     self.d_seg_emb = d_seg_emb
-    self.dropout = dropout
+    self.dec_dropout = dropout
     self.activation = activation
     self.cond_mode = cond_mode
 

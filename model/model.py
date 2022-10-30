@@ -13,7 +13,7 @@ from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrained
 from .cross_attn import MusicClIPXLayer
 from .tokenization import BertTokenizer
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MusicCLIP(torch.nn.Module):
     def __init__(
@@ -59,7 +59,7 @@ class MusicCLIP(torch.nn.Module):
             config['model']['enc_d_ff'], 
             config['model']['d_latent'], 
             config['model'].get('enc_dropout', 0.1), 
-            config['model'].get('enc_activation', 0.1)
+            config['model'].get('enc_activation', 'relu')
         )
 
         self.emb_dropout = nn.Dropout(config['model'].get('enc_dropout', 0.1))
@@ -111,15 +111,16 @@ class MusicCLIP(torch.nn.Module):
     def encode_text(
         self,
         sents,
-        token_type_ids = None
+        token_type_ids = None,
+        attention_mask = None,
     ):
         train_features = convert_sents_to_features(
             sents, self.max_seq_length, self.tokenizer
         )
 
-        input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long).cuda()
-        input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).cuda()
-        segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long).cuda()
+        input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long).to(device)
+        input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).to(device)
+        segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long).to(device)
 
         if attention_mask is None:
             attention_mask = torch.ones_like(input_ids)

@@ -1,10 +1,9 @@
 import sys
 import yaml
 import torch
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
 
 # import module from the same directory
-from model.music_transformer import MusicConfig
 from model.model import MusicCLIP
 from dataloader.dataloader_updated import get_dataloader
 
