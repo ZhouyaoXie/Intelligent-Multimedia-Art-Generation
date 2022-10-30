@@ -13,6 +13,8 @@ import tensorflow as tf
 import torch
 from torch import nn
 
+from .utils import cached_path
+
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +297,7 @@ class BertAttention(nn.Module):
 		self.key = nn.Linear(ctx_dim, self.all_head_size)
 		self.value = nn.Linear(ctx_dim, self.all_head_size)
 
-		self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
+		self.dropout = nn.Dropout(config.dropout)
 
 	def transpose_for_scores(self, x):
 		new_x_shape = x.size()[
@@ -340,7 +342,7 @@ class BertAttOutput(nn.Module):
 		super(BertAttOutput, self).__init__()
 		self.dense = nn.Linear(config.hidden_size, config.hidden_size)
 		self.LayerNorm = BertLayerNorm(config.hidden_size, eps=1e-12)
-		self.dropout = nn.Dropout(config.hidden_dropout_prob)
+		self.dropout = nn.Dropout(config.dropout)
 
 	def forward(self, hidden_states, input_tensor):
 		hidden_states = self.dense(hidden_states)

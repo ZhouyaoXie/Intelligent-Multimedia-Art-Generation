@@ -364,7 +364,7 @@ def get_dataloader(data_config):
     # files that we do not consider because they have no events between some consecutive bars
     print("Obtaining files to drop...")
     no_events_d = {}
-    with open("dataloader/no_events_fn.txt", "r") as f:
+    with open("no_events_fn.txt", "r") as f:
       for line in f.readlines():
         fn, num = line.rstrip('\n').split()
         no_events_d[fn] = int(num)

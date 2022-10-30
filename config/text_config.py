@@ -7,6 +7,8 @@ import random
 import numpy as np
 import torch
 
+# bert config: https://github.com/deepset-ai/bert-tensorflow/blob/master/samples/bert_config.json
+
 
 def get_optimizer(optim):
     # Bind the optimizer
@@ -44,7 +46,10 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--attention_probs_dropout_prob', type=float, default=0.1)
+    parser.add_argument('--hidden_dropout_prob', type=float, default=0.1, help='dropout of BERT hidden layers')
     parser.add_argument('--seed', type=int, default=9595, help='random seed')
+    parser.add_argument('--hidden_act', type=str, default='gelu', help='Activation function of BERT')
 
     # Debugging
     parser.add_argument('--output', type=str, default='snap/test')
@@ -73,6 +78,13 @@ def parse_args():
     parser.add_argument("--llayers", default=9, type=int, help='Number of Language layers')
     parser.add_argument("--xlayers", default=5, type=int, help='Number of CROSS-modality layers.')
     parser.add_argument("--rlayers", default=5, type=int, help='Number of object Relationship layers.')
+    parser.add_argument("--hidden_size", default=768, type=int, help='Cross attention hidden size.')
+    parser.add_argument("--intermediate_size", default=3072, type=int, help='BERT intermediate layers hidden size.')
+    parser.add_argument("--num_attention_heads", default=12, type=int, help='Number of Cross attention heads.')
+    parser.add_argument("--max_position_embeddings", default=512, type=int, help='Maximum sequence length this model might be used with.')
+    parser.add_argument("--type_vocab_size", default=2, type=int, help='Voc size of the `token_type_ids` passed into `BertModel`.')
+    parser.add_argument("--initializer_range", default=0.02, type=float, help='The sttdev of the truncated_normal_initializer for initializing all weight matrices..')
+    parser.add_argument("--vocab_size", default=30000, type=int, help='Vocabulary size of `inputs_ids` in `BertModel`.')
 
     # LXMERT Pre-training Config
     parser.add_argument("--taskMatched", dest='task_matched', action='store_const', default=False, const=True)
@@ -83,6 +95,7 @@ def parse_args():
     parser.add_argument("--qaSets", dest='qa_sets', default=None, type=str)
     parser.add_argument("--wordMaskRate", dest='word_mask_rate', default=0.15, type=float)
     parser.add_argument("--objMaskRate", dest='obj_mask_rate', default=0.15, type=float)
+
 
     # Training configuration
     parser.add_argument("--multiGPU", action='store_const', default=False, const=True)

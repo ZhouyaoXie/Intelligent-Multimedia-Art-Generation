@@ -4,6 +4,7 @@ data:
     # val_split:        ./pickles/val_pieces.pkl
     # test_split:       ./pickles/test_pieces.pkl
     # vocab_path:       ./pickles/remi_vocab.pkl
+    n_token:          404
     data_dir:         MuseMorphose-main/remi_dataset
     neg_train_split:  remi_splitted/neg_tuples_train.csv
     neg_val_split:    remi_splitted/neg_tuples_val.csv
@@ -32,13 +33,12 @@ model:
     d_rfreq_emb:      64
     cond_mode:        in-attn
     # pretrained_params_path:      musemorphose_pretrained_weights.pt
-    pretrained_params_path:      null
+    pretrained_params_path:      converted_pretrained_weights.pt
     pretrained_optim_path:       null
-    num_bert_layers:    6
     use_attr_cls:     False
 
-x_attention:
-    num_x_layers:     6
+# x_attention:
+#     num_x_layers:     6
 
 training:
     device:           cuda:0

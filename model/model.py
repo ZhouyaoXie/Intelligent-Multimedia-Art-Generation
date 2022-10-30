@@ -29,7 +29,8 @@ class MusicCLIP(torch.nn.Module):
         self._init_music_encoder_from_config(music_config)
 
         # initialize cross attention layers
-        self.num_x_layers = music_config['x_attention']['num_x_layers']
+        # self.num_x_layers = music_config['x_attention']['num_x_layers']
+        self.num_x_layers = text_config.xlayers
         self.x_layers = nn.ModuleList(
             [MusicClIPXLayer(text_config) for _ in range(self.num_x_layers)]
         )
@@ -43,14 +44,14 @@ class MusicCLIP(torch.nn.Module):
         #Initialize text encoder
         self.embeddings = BertEmbeddings(text_config)
         self.pooler = BertPooler(text_config)
-        self.apply(self.init_bert_weights)
+        # self.apply(self.init_bert_weights)
         self._init_bert_from_config(text_config)
 
 
     def _init_music_encoder_from_config(self, config):
-        self.token_emb = TokenEmbedding(config['n_token'], config['model']['d_embed'], config['model']['enc_d_model'])
+        self.token_emb = TokenEmbedding(config['data']['n_token'], config['model']['d_embed'], config['model']['enc_d_model'])
         self.pe = PositionalEncoding(config['model']['d_embed'])
-        # self.dec_out_proj = nn.Linear(config['model']['dec_d_model'], config['n_token'])
+        # self.dec_out_proj = nn.Linear(config['model']['dec_d_model'], config['data']['n_token'])
         self.encoder = VAETransformerEncoder(
             config['model']['enc_n_layer'], 
             config['model']['enc_n_head'], 
@@ -70,7 +71,7 @@ class MusicCLIP(torch.nn.Module):
 
     def _init_bert_from_config(self, config):
         # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
-        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config['model']['num_bert_layers'])])
+        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.llayers)])
         self.gradient_checkpointing = False
 
 
@@ -120,7 +121,6 @@ class MusicCLIP(torch.nn.Module):
         input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).cuda()
         segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long).cuda()
 
-
         if attention_mask is None:
             attention_mask = torch.ones_like(input_ids)
         if token_type_ids is None:
@@ -159,9 +159,9 @@ class MusicCLIP(torch.nn.Module):
         music_feats = self.encode_music(
             enc_inp, 
             dec_inp, 
-            dec_inp_bar_pos, 
-            rfreq_cls, 
-            polyph_cls,
+            # dec_inp_bar_pos, 
+            # rfreq_cls, 
+            # polyph_cls,
             padding_mask
         )
 
@@ -184,6 +184,14 @@ class MusicCLIP(torch.nn.Module):
 
         return lang_feats, music_feats , pooled_output, lang_attention_mask
 
+
+class InputFeatures(object):
+    """A single set of features of data."""
+
+    def __init__(self, input_ids, input_mask, segment_ids):
+        self.input_ids = input_ids
+        self.input_mask = input_mask
+        self.segment_ids = segment_ids
 
 def convert_sents_to_features(sents, max_seq_length, tokenizer):
     """Loads a data file into a list of `InputBatch`s."""

@@ -9,6 +9,7 @@ from model.model import MusicCLIP
 from dataloader.dataloader_updated import get_dataloader
 
 from model.train_new import train
+from config.text_config import text_args
 
 print("loading config...")
 config_path = "config/default.yaml"
@@ -46,8 +47,8 @@ if __name__ == "__main__":
     # print("testing dataloader...")
     data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = test_dataloader(data_config)
-
-    # model = MusicCLIP(config)
+    
+    model = MusicCLIP(data_config, text_args)
     # print(model.state_dict().keys())
 
-    train(music_config = data_config)
+    train(music_config = data_config, text_config = text_args)
