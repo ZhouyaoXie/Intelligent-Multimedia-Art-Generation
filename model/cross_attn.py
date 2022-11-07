@@ -20,6 +20,14 @@ class MusicClIPXLayer(nn.Module):
 		self.visn_output = BertOutput(config)
 
 	def cross_att(self, lang_input, lang_attention_mask, visn_input, visn_attention_mask):
+		assert lang_input is not None 
+		assert visn_input is not None 
+		print('lang_input size', lang_input.size(), 'visn_input size', visn_input.size()) 
+		# [4,20,768]; [128,64,512]
+		# [bs, seq_len, d_latent], [seq_len, bs, d_latent]
+		# 1. bert seq_len should be 128
+		# 2. why music bs is 64?
+		# 3. add 1 linear layer from 512 -> 768
 		# Cross Attention
 		lang_att_output = self.visual_attention(
 			lang_input, visn_input, ctx_att_mask=visn_attention_mask)

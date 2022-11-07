@@ -314,6 +314,8 @@ class BertAttention(nn.Module):
 		key_layer = self.transpose_for_scores(mixed_key_layer)
 		value_layer = self.transpose_for_scores(mixed_value_layer)
 
+		print('query key layer size', query_layer.size(), key_layer.size())
+
 		# Take the dot product between "query" and "key" to get the raw attention scores.
 		attention_scores = torch.matmul(
 			query_layer, key_layer.transpose(-1, -2))

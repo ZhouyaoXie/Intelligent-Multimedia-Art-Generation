@@ -86,7 +86,9 @@ class MusicCLIP(torch.nn.Module):
     ):
         # [shape of enc_inp] (seqlen_per_bar, bsize, n_bars_per_sample)
         # enc_bt_size, enc_n_bars = enc_inp.size(1), enc_inp.size(2)
+        print('enc_inp', enc_inp.size()) # (128, 4, 16)
         enc_token_emb = self.token_emb(enc_inp)
+        print('enc_token_emb', enc_token_emb.size()) # (128, 4, 16, 512) [seq_len, bs, n_bars_per_sample, d_embed]
 
         # [shape of dec_inp] (seqlen_per_sample, bsize)
         # [shape of rfreq_cls & polyph_cls] same as above 
@@ -94,10 +96,12 @@ class MusicCLIP(torch.nn.Module):
         dec_token_emb = self.token_emb(dec_inp)
 
         enc_token_emb = enc_token_emb.reshape(
-        enc_inp.size(0), -1, enc_token_emb.size(-1)
+            enc_inp.size(0), -1, enc_token_emb.size(-1)
         )
+        print('enc_token_emb', enc_token_emb.size()) # (128, 64, 512) [seq_len, bs * n_bars_per_sample, d_embed]
         enc_inp = self.emb_dropout(enc_token_emb) + self.pe(enc_inp.size(0))
         dec_inp = self.emb_dropout(dec_token_emb) + self.pe(dec_inp.size(0))
+        print('enc_inp', enc_inp.size()) # (128, 64, 512)
 
         # [shape of padding_mask] (bsize, n_bars_per_sample, seqlen_per_bar)
         # -- should be `True` for padded indices (i.e., those >= seqlen of the bar), `False` otherwise
@@ -165,6 +169,9 @@ class MusicCLIP(torch.nn.Module):
             # polyph_cls,
             padding_mask
         )
+        assert music_feats.size()[0] == 4
+        assert music_feats.size()[1] == 128
+        assert music_feats.size()[2] == 512
 
         # encode text
         lang_feats, lang_attention_mask = self.encode_text(
@@ -173,7 +180,7 @@ class MusicCLIP(torch.nn.Module):
         )
         # Run language layers
         for layer_module in self.layer:
-            lang_feats, lang_attention_mask = layer_module(lang_feats, lang_attention_mask)
+            lang_feats = layer_module(lang_feats, lang_attention_mask)
 
         # Run cross-modality layers
         for layer_module in self.x_layers:
