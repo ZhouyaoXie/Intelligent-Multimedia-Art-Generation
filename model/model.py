@@ -70,7 +70,7 @@ class MusicCLIP(torch.nn.Module):
             weights_init(self)
         
         # add extra layer to project output from 512 to 768 dim
-        self.out_proj = nn.Linear(512, 768)
+        self.out_proj = nn.Linear(config['model']['d_latent'], self.config['hidden_size'])
 
     def _init_bert_from_config(self, config):
         # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
