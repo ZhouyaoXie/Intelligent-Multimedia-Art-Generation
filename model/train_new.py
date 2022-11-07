@@ -64,12 +64,6 @@ def _train(music_config, text_args):
     for epoch in range(epochs):
         print("Starting epoch ", epoch)
         for batch_idx, batch_samples in enumerate(train_dloader):
-            # text = convert_sents_to_features(
-            #     batch_samples['text_label'], model.max_seq_length, model.tokenizer
-            # ).permute(1, 0).to(device)
-            # print(batch_samples['text_label'])
-            # print(len(batch_samples['text_label']))
-            # print(type(batch_samples['text_label'][0]))
             model.zero_grad()
             batch_enc_inp = batch_samples['enc_input'].permute(2, 0, 1).to(device)
             batch_dec_inp = batch_samples['dec_input'].permute(1, 0).to(device)
@@ -79,20 +73,21 @@ def _train(music_config, text_args):
             batch_polyph_cls = batch_samples['polyph_cls'].permute(1, 0).to(device)
             # text = torch.Tensor(batch_samples['text_label']).permute(1, 0).to(device)
             text = batch_samples['text_label']
-            print(batch_samples['pos'].size())
-            y = batch_samples['pos'].to(device)
+            y = batch_samples['pos'].float().to(device)
 
-            lang_feats, vision_feats, pooled_output, lang_attention_mask = model(
+            lang_feats, music_feats, pooled_output, lang_attention_mask = model(
                 text,
                 batch_enc_inp, 
                 batch_dec_inp, 
                 batch_inp_bar_pos, 
+                music_config['data']['max_bars'],
                 rfreq_cls=batch_rfreq_cls, 
                 polyph_cls=batch_polyph_cls, 
                 padding_mask=batch_padding_mask,
                 music_attention_mask = None,
             )
-            loss = c_loss(pooled_output,y)
+            # print('y', y)
+            loss = c_loss(music_feats, lang_feats, y)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

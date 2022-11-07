@@ -22,13 +22,10 @@ class MusicClIPXLayer(nn.Module):
 	def cross_att(self, lang_input, lang_attention_mask, visn_input, visn_attention_mask):
 		assert lang_input is not None 
 		assert visn_input is not None 
-		print('lang_input size', lang_input.size(), 'visn_input size', visn_input.size()) 
-		# [4,20,768]; [128,64,512]
-		# [bs, seq_len, d_latent], [seq_len, bs, d_latent]
-		# 1. bert seq_len should be 128
-		# 2. why music bs is 64?
-		# 3. add 1 linear layer from 512 -> 768
-		# Cross Attention
+		# print('lang_input size', lang_input.size())  # [64, 128, 768]
+		# print('lang_attention_mask', lang_attention_mask.size()) # [4, 1, 1, 128]
+		# [64, 128, 768]; [64, 128, 768]
+		# [bs, seq_len, d_latent]
 		lang_att_output = self.visual_attention(
 			lang_input, visn_input, ctx_att_mask=visn_attention_mask)
 		visn_att_output = self.visual_attention(
@@ -90,4 +87,4 @@ if __name__ == "__main__":
     data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
     dset, dset_val, dloader, dloader_val = test_dataloader(data_config)
     model = MusicClIPXLayer(config)
-    print(model.state_dict().keys())
+    # print(model.state_dict().keys())

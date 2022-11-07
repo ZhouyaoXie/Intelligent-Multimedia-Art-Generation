@@ -12,6 +12,8 @@ from .music_encoder_utils import (
 from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel
 from .cross_attn import MusicClIPXLayer
 from .tokenization import BertTokenizer
+import torch.nn.functional as F
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -24,6 +26,8 @@ class MusicCLIP(torch.nn.Module):
         super().__init__()
         self.music_config = music_config 
         self.config = text_config
+        self.music_seq_len = music_config['data']['enc_seqlen']
+        self.text_seq_len = 20
 
         # initialzie music encoder
         self._init_music_encoder_from_config(music_config)
@@ -70,7 +74,7 @@ class MusicCLIP(torch.nn.Module):
             weights_init(self)
         
         # add extra layer to project output from 512 to 768 dim
-        self.out_proj = nn.Linear(config['model']['d_latent'], self.config['hidden_size'])
+        self.out_proj = nn.Linear(config['model']['d_embed'], self.config.hidden_size)
 
     def _init_bert_from_config(self, config):
         # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
@@ -86,12 +90,13 @@ class MusicCLIP(torch.nn.Module):
         # polyph_cls=None, 
         padding_mask=None,
         # use_attr_cls=True,
+        batch_first = True
     ):
         # [shape of enc_inp] (seqlen_per_bar, bsize, n_bars_per_sample)
-        # enc_bt_size, enc_n_bars = enc_inp.size(1), enc_inp.size(2)
-        print('enc_inp', enc_inp.size()) # (128, 4, 16)
+        enc_bt_size, enc_n_bars = enc_inp.size(1), enc_inp.size(2)
+        # print('enc_inp', enc_inp.size()) # (128, 4, 512)
         enc_token_emb = self.token_emb(enc_inp)
-        print('enc_token_emb', enc_token_emb.size()) # (128, 4, 16, 512) [seq_len, bs, n_bars_per_sample, d_embed]
+        # print('enc_token_emb', enc_token_emb.size()) # (128, 4, 16, 512) [seq_len, bs, n_bars_per_sample, d_embed]
 
         # [shape of dec_inp] (seqlen_per_sample, bsize)
         # [shape of rfreq_cls & polyph_cls] same as above 
@@ -101,10 +106,11 @@ class MusicCLIP(torch.nn.Module):
         enc_token_emb = enc_token_emb.reshape(
             enc_inp.size(0), -1, enc_token_emb.size(-1)
         )
-        print('enc_token_emb', enc_token_emb.size()) # (128, 64, 512) [seq_len, bs * n_bars_per_sample, d_embed]
+
+        # print('enc_token_emb', enc_token_emb.size()) # (128, 64, 512) [seq_len, bs * n_bars_per_sample, d_embed]
         enc_inp = self.emb_dropout(enc_token_emb) + self.pe(enc_inp.size(0))
         dec_inp = self.emb_dropout(dec_token_emb) + self.pe(dec_inp.size(0))
-        print('enc_inp', enc_inp.size()) # (128, 64, 512)
+        # print('enc_inp', enc_inp.size()) # (128, 64, 512)
 
         # [shape of padding_mask] (bsize, n_bars_per_sample, seqlen_per_bar)
         # -- should be `True` for padded indices (i.e., those >= seqlen of the bar), `False` otherwise
@@ -112,6 +118,13 @@ class MusicCLIP(torch.nn.Module):
             padding_mask = padding_mask.reshape(-1, padding_mask.size(-1))
 
         music_feats , music_feats_hidden, mu, logvar = self.encoder(enc_inp, padding_mask=padding_mask)
+
+        music_feats = music_feats.reshape(enc_inp.size(0), enc_bt_size, enc_n_bars, enc_token_emb.size(-1))
+        music_feats = music_feats.mean(2)
+        if batch_first:
+            music_feats = music_feats.transpose(0, 1)
+        # print('music_feats size returned by encode_music', music_feats.size())
+
         return music_feats
 
 
@@ -133,6 +146,12 @@ class MusicCLIP(torch.nn.Module):
             attention_mask = torch.ones_like(input_ids)
         if token_type_ids is None:
             token_type_ids = torch.zeros_like(input_ids)
+        
+        # pad to music seq_len (128)
+        attention_mask = F.pad(
+            input=attention_mask, 
+            pad = (0, self.music_seq_len - self.text_seq_len, 0, 0)
+        )
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
 
         # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
@@ -154,11 +173,12 @@ class MusicCLIP(torch.nn.Module):
         enc_inp, 
         dec_inp, 
         dec_inp_bar_pos, 
+        num_bars,
         rfreq_cls=None, 
         polyph_cls=None, 
         padding_mask=None,
         music_attention_mask = None,
-        token_type_ids = None
+        token_type_ids = None,
     ):
         """ Adapted from https://github.com/airsplay/lxmert/blob/master/src/lxrt/modeling.py#L546
         
@@ -172,21 +192,53 @@ class MusicCLIP(torch.nn.Module):
             # polyph_cls,
             padding_mask
         )
-        assert music_feats.size()[0] == 4
-        assert music_feats.size()[1] == 128
-        assert music_feats.size()[2] == 512
-        
         # project music feats from 512 to 768
         music_feats = self.out_proj(music_feats)
+        
+        try:
+            assert music_feats.size()[0] == 4
+            assert music_feats.size()[1] == 128
+            assert music_feats.size()[2] == 768
+        except Exception:
+            print('WARNING music_feats dimension mismatch, expect {s}, get {t}'.format(
+                s = (4, 128, 768),
+                t = music_feats.size(),
+                )
+            )
 
         # encode text
         lang_feats, lang_attention_mask = self.encode_text(
             sents,
             token_type_ids
         )
+        lang_feats = F.pad(
+            input=lang_feats, 
+            pad = (0, 0, 0, self.music_seq_len - self.text_seq_len, 0, 0)
+        )
         # Run language layers
         for layer_module in self.layer:
             lang_feats = layer_module(lang_feats, lang_attention_mask)
+
+        # print('lang_attention_mask size', lang_attention_mask.size()) # [4, 1, 1, 128]
+
+        # # repeat lang_feats & lang_attention_mask for all music bars
+        # lang_feats = lang_feats.repeat((num_bars, 1, 1))
+        # lang_attention_mask = lang_attention_mask.repeat((num_bars, 1, 1, 1))
+        # pad lang_feats seq_len to match with music encoder 
+        music_seq_len = music_feats.size()[1]
+        text_seq_len = lang_feats.size()[1]
+        # print('music & text seq_len', music_seq_len, text_seq_len)
+        
+        try:
+            assert lang_feats.size()[0] == 4
+            assert lang_feats.size()[1] == 128
+            assert lang_feats.size()[2] == 768
+        except Exception as e:
+            print('WARNING music_feats dimension mismatch, expect {s}, get {t}'.format(
+                s = (4, 128, 768),
+                t = music_feats.size(),
+                )
+            )
 
         # Run cross-modality layers
         for layer_module in self.x_layers:

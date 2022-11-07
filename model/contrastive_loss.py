@@ -28,26 +28,40 @@ class ContrastiveLoss(nn.Module):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.reduction = reduction 
 
-    def forward(self, x1, y1, y2=None, norm = True):
+    def forward(self, query, embed, y, norm = True):
         """ Computes contrastive loss as the cross entropy over cosine similarities between
         paired inputs, with positive pairs having label 1 and negative pairs label 0
         https://github.com/RElbers/info-nce-pytorch/blob/main/info_nce/__init__.py
 
         Params:
-            x1: input embedding, shape [bs, embed_dim]
-            y1: positive pair embedding, shape [bs, embed_dim]
-            y2: [Optional] negative pair embedding, shape [bs, embed_dim]
-                if negative pair is None, then use all other positive pairs as negative
+            query: input embedding, shape [bs, embed_dim]
+            embed: pooled text embedding to compare query with, shape [bs, embed_dim]
+            y: label, shape [bs]. Should be [1, 0, 1, 0, ...]
             norm: normalize input embeddings or not, default to be True
 
         Returns:
             Contrastive loss
         """
+        # input will always be (positive, negative, positive, negative, ...) in pairs
+        # process input first 
+        y1, y2 = embed[::2, :], embed[1::2, :]
+        x1 = query[::2, :]
+        loss = 0
+        bs = x1.size()[0]
+        for b in range(bs):
+            loss += self._loss(x1[b, :], y1[b, :], y2[b, :], norm)
+        return loss / bs
+
+        
+    def _loss(self, x1, y1, y2, norm):
         if norm:
             x1, y1, y2 = self.normalize(x1, y1, y2)
         
         if y2 is not None:
             # Explicit negative keys
+
+            # print('x1 size', x1.size())
+            # print('y1 y2 size', y1.size(), y2.size())
 
             # Cosine between positive pairs
             positive_logit = torch.sum(x1 * y1, dim=1, keepdim=True)
@@ -62,7 +76,7 @@ class ContrastiveLoss(nn.Module):
             # Negative keys are implicitly off-diagonal positive keys.
 
             # Cosine between all combinations
-            logits = x1 @ torch.transpose(y1)
+            logits = x1 @ self.transpose(y1)
 
             # Positive keys are the entries on the diagonal
             labels = torch.arange(len(x1), device=x1.device)
@@ -89,7 +103,7 @@ if __name__ == "__main__":
     y2 = torch.Tensor([[0.9, 0.8, 0.1, 0, 0.9],
                         [0.1, 0.1, 0.9, 0.8, 0.9],
                         [0.1, 0, 0.9, 1, 1],])
-    print('this loss should be small: ', loss(x1, y1, y2))
+    print('this loss should be small: ', loss._loss(x1, y1, y2))
 
     x1 = torch.Tensor([[0, 0, 0.8, 0.7, 0],
                        [0.7, 0.9, 0, 0, 0],
@@ -100,4 +114,4 @@ if __name__ == "__main__":
     y2 = torch.Tensor([[0.1, 0.2, 0.9, 0.9, 0.3],
                         [0.6, 0.7, 0.2, 0.1, 0.2],
                         [0.8, 0.7, 0.2, 0.1, 0.2]])
-    print('this loss should be big: ', loss(x1, y1, y2))
+    print('this loss should be big: ', loss._loss(x1, y1, y2))

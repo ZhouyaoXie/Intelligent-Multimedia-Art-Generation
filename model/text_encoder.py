@@ -12,6 +12,8 @@ import tensorflow as tf
 
 import torch
 from torch import nn
+import torch.nn.functional as F
+
 
 from .utils import cached_path
 
@@ -289,6 +291,7 @@ class BertAttention(nn.Module):
 		self.attention_head_size = int(
 			config.hidden_size / config.num_attention_heads)
 		self.all_head_size = self.num_attention_heads * self.attention_head_size
+		self.text_seq_len, self.music_seq_len = 20, 128
 
 		# visual_dim = 2048
 		if ctx_dim is None:
@@ -303,6 +306,16 @@ class BertAttention(nn.Module):
 		new_x_shape = x.size()[
 			:-1] + (self.num_attention_heads, self.attention_head_size)
 		x = x.view(*new_x_shape)
+		# pad seq_len if applicable
+		# print('transpose_for_scores input size', x.size())
+		if x.size()[1] == 20:
+			x = F.pad(
+					input=x, 
+					pad = (0, 0, 0, 0, 0, self.music_seq_len - self.text_seq_len, 0, 0), 
+					mode = 'constant', 
+					value = 0,
+        		)
+			# print('transpose_for_scores input size after pad', x.size())
 		return x.permute(0, 2, 1, 3)
 
 	def forward(self, hidden_states, context, attention_mask=None):
@@ -314,9 +327,10 @@ class BertAttention(nn.Module):
 		key_layer = self.transpose_for_scores(mixed_key_layer)
 		value_layer = self.transpose_for_scores(mixed_value_layer)
 
-		print('query key layer size', query_layer.size(), key_layer.size())
+		# print('query key layer size', query_layer.size(), key_layer.size())
 
 		# Take the dot product between "query" and "key" to get the raw attention scores.
+		# [4, 12, 128, 128]
 		attention_scores = torch.matmul(
 			query_layer, key_layer.transpose(-1, -2))
 		attention_scores = attention_scores / \
