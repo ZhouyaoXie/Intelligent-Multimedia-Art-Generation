@@ -68,6 +68,9 @@ class MusicCLIP(torch.nn.Module):
             self.load_state_dict(torch.load(config['model']['pretrained_params_path']), strict=False)
         else:
             weights_init(self)
+        
+        # add extra layer to project output from 512 to 768 dim
+        self.out_proj = nn.Linear(config['model']['d_latent'], self.config['hidden_size'])
 
     def _init_bert_from_config(self, config):
         # code from https://github.com/huggingface/transformers/blob/ad11b79e95acb3c89f994c725594ec52bd181fbf/src/transformers/models/bert/modeling_bert.py#L556
@@ -172,6 +175,9 @@ class MusicCLIP(torch.nn.Module):
         assert music_feats.size()[0] == 4
         assert music_feats.size()[1] == 128
         assert music_feats.size()[2] == 512
+        
+        # project music feats from 512 to 768
+        music_feats = self.out_proj(music_feats)
 
         # encode text
         lang_feats, lang_attention_mask = self.encode_text(
