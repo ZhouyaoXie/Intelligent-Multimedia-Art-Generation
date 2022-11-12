@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info
+.pytest_cache
+.ipynb_checkpoints
+
+thumbs.db
+.DS_Store
+.idea
+
+musemorphose_pretrained_weights.pt
+how c3104f7b3487c2b9f41faa9f61790adb6388da71 --name-only

@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
 import os, pickle, random
 from glob import glob
 
-import csv
 import torch
 import numpy as np
-import yaml 
 
 from torch.utils.data import Dataset, DataLoader
-from torch.autograd.grad_mode import F
-
-# NOTES: run setup.sh before running / importing this file
-
-global no_events_d
 
 IDX_TO_KEY = {
   0: 'A',
@@ -32,40 +24,6 @@ KEY_TO_IDX = {
   v:k for k, v in IDX_TO_KEY.items()
 }
 
-def print_dict_ex(d):
-  print("Printing 3 lines of examples ...")
-  count = 0
-  for k, v in d.items():
-    print(f"{k}: {v}")
-    count += 1
-    if count >= 3:
-      break
-
-def load_tuples(fn):
-  fn_map = {}
-  recording_track_map = {}
-  with open(fn) as csv_file:
-    csv_reader = csv.reader(csv_file)
-    count = 0
-    for row in csv_reader:
-      assert len(row) == 2
-      if len(row[1])==0:
-        print("Dropping out rows with null labels...")
-        continue
-      if count != 0:
-        track, recording, chunk = row[0].split("_")
-        map_id = f"{recording}_{chunk}"
-        if f"{map_id}.pkl" in no_events_d:  # remove some files
-          continue
-        if map_id in fn_map:
-          fn_map[map_id].append(row[1])
-        else:
-          fn_map[map_id] = [row[1]]
-      count += 1
-    print(f"Processed {count - 1} lines of tuples.")
-  return fn_map
-
-# utility funcs from Musemorphose.dataloader
 def get_chord_tone(chord_event):
   tone = chord_event['value'].split('_')[0]
   return tone
@@ -131,7 +89,7 @@ class REMIFullSongTransformerDataset(Dataset):
                model_enc_seqlen=128, model_dec_seqlen=1280, model_max_bars=16,
                pieces=[], do_augment=True, augment_range=range(-6, 7), 
                min_pitch=22, max_pitch=107, pad_to_same=True, use_attr_cls=True,
-               appoint_st_bar=None, dec_end_pad_value=None, pos_map=None, neg_map=None):
+               appoint_st_bar=None, dec_end_pad_value=None):
     self.vocab_file = vocab_file
     self.read_vocab()
 
@@ -157,29 +115,6 @@ class REMIFullSongTransformerDataset(Dataset):
     else:
       self.dec_end_pad_value = self.pad_token
 
-    # added for our labels
-    if pos_map is None or neg_map is None:
-      raise ValueError("pos_map and neg_map cannot be None.")
-    self.matched_pieces = self.match_labels(pos_map, neg_map)
-
-  def match_labels(self, pos_map, neg_map):
-    # added, pair pos and neg labels
-    data_groups = []
-    for idx in range(len(self.pieces)):
-      f = self.pieces[idx]
-      fn = f.split("/")[-1].split(".")[0]
-      if fn in pos_map:
-        assert fn in neg_map
-        if len(neg_map[fn]) != len(pos_map[fn]):
-          print(f"file {fn} has different number of neg / pos labels:", len(pos_map[fn]), len(neg_map[fn]))
-        # assert len(neg_map[fn]) == len(pos_map[fn])
-        count = min(len(pos_map[fn]), len(neg_map[fn]))
-        for j in range(count):
-          pos_label = pos_map[fn][j]
-          neg_label = neg_map[fn][j]
-          data_groups.append((idx, fn, pos_label, neg_label))
-    return data_groups
-
   def read_vocab(self):
     vocab = pickle_load(self.vocab_file)[0]
     self.idx2event = pickle_load(self.vocab_file)[1]
@@ -200,7 +135,7 @@ class REMIFullSongTransformerDataset(Dataset):
 
     for i, p in enumerate(self.pieces):
       bar_pos, p_evs = pickle_load(p)
-      if not i % 2000:
+      if not i % 200:
         print ('[preparing data] now at #{}'.format(i))
       if bar_pos[-1] == len(p_evs):
         print ('piece {}, got appended bar markers'.format(p))
@@ -285,28 +220,11 @@ class REMIFullSongTransformerDataset(Dataset):
     return padded_enc_input, enc_padding_mask, enc_lens
 
   def __len__(self):
-    # return len(self.pieces)
-    return len(self.matched_pieces) * 2
+    return len(self.pieces)
 
   def __getitem__(self, idx):
     if torch.is_tensor(idx):
       idx = idx.tolist()
-
-    # original idx for indexing self.pieces
-    # now we need to idx self.matched_pieces
-    # get original idx and matched idx
-
-    matched_idx = idx
-    matched_data = self.matched_pieces[idx // 2]
-    idx = matched_data[0]
-    pos_label = matched_data[2]
-    neg_label = matched_data[3]
-    if matched_idx % 2 == 0:
-      text_label = pos_label
-      pos = True
-    else:
-      text_label = neg_label
-      pos = False
 
     bar_events, st_bar, bar_pos, enc_n_bars = self.get_sample_from_file(idx)
     if self.do_augment:
@@ -339,8 +257,7 @@ class REMIFullSongTransformerDataset(Dataset):
 
     return {
       'id': idx,
-      # 'piece_id': int(os.path.basename(self.pieces[idx]).replace('.pkl', '')),
-      'piece_id': os.path.basename(self.pieces[idx]).replace('.pkl', ''),
+      'piece_id': int(os.path.basename(self.pieces[idx]).replace('.pkl', '')),
       'st_bar_id': st_bar,
       'bar_pos': np.array(bar_pos, dtype=int),
       'enc_input': enc_inp,
@@ -353,105 +270,34 @@ class REMIFullSongTransformerDataset(Dataset):
       'length': min(length, self.model_dec_seqlen),
       'enc_padding_mask': enc_padding_mask,
       'enc_length': enc_lens,
-      'enc_n_bars': enc_n_bars,
-      'text_label': text_label,
-      'pos': pos,  # whether this is a positive label
+      'enc_n_bars': enc_n_bars
     }
 
-
-def get_dataloader(data_config):
-    global no_events_d
-    # files that we do not consider because they have no events between some consecutive bars
-    print("Obtaining files to drop...")
-    no_events_d = {}
-    with open("no_events_fn.txt", "r") as f:
-      for line in f.readlines():
-        fn, num = line.rstrip('\n').split()
-        no_events_d[fn] = int(num)
-
-    # obtain datasets
-    neg_test = load_tuples(data_config['data']['neg_test_split'])
-    neg_train = load_tuples(data_config['data']['neg_train_split'])
-    neg_val = load_tuples(data_config['data']['neg_val_split'])
-    pos_test = load_tuples(data_config['data']['pos_test_split'])
-    pos_train = load_tuples(data_config['data']['pos_train_split'])
-    pos_val = load_tuples(data_config['data']['pos_val_split'])
-    print("Print some examples from neg_test set:")
-    print_dict_ex(neg_test)
-
-    # generate datasets
-    print("Generating train set...")
-    train_dset = REMIFullSongTransformerDataset(
-      data_config['data']['data_dir'], data_config['data']['vocab_path'],
-      do_augment=True, 
-      use_attr_cls=True,
-      model_max_bars=data_config['data']['max_bars'], 
-      model_dec_seqlen=data_config['data']['enc_seqlen'], 
-      model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
-      pos_map=pos_train, 
-      neg_map=neg_train,
-    )
-    print ('train set length:', len(train_dset))
-
-    print("Generating val set...")
-    val_dset = REMIFullSongTransformerDataset(
-      data_config['data']['data_dir'], data_config['data']['vocab_path'],
-      do_augment=True, 
-      use_attr_cls=True,
-      model_max_bars=data_config['data']['max_bars'], 
-      model_dec_seqlen=data_config['data']['enc_seqlen'], 
-      model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
-      pos_map=pos_val, 
-      neg_map=neg_val,
-    )
-    print ('val set length:', len(val_dset))
-
-    print("Generating test set...")
-    test_dset = REMIFullSongTransformerDataset(
-      data_config['data']['data_dir'], data_config['data']['vocab_path'],
-      do_augment=True, 
-      use_attr_cls=True,
-      model_max_bars=data_config['data']['max_bars'], 
-      model_dec_seqlen=data_config['data']['enc_seqlen'], 
-      model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
-      pos_map=pos_test, 
-      neg_map=neg_test,
-    )
-    print ('test set length:', len(test_dset))
-
-    # get dataloader
-    train_dloader = DataLoader(
-      train_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
-    )
-    val_dloader = DataLoader(
-      val_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
-    )
-    test_dloader = DataLoader(
-      test_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
-    )
-
-    return train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader
-
-
 if __name__ == "__main__":
-  config_path = "config/default.yaml"
-  data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+  # codes below are for unit test
+  dset = REMIFullSongTransformerDataset(
+    './remi_dataset', './pickles/remi_vocab.pkl', do_augment=True, use_attr_cls=True,
+    model_max_bars=16, model_dec_seqlen=1280, model_enc_seqlen=128, min_pitch=22, max_pitch=107
+  )
+  print (dset.bar_token, dset.pad_token, dset.vocab_size)
+  print ('length:', len(dset))
 
-  train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(data_config)
+  # for i in random.sample(range(len(dset)), 100):
+  # for i in range(len(dset)):
+  #   sample = dset[i]
+    # print (i, len(sample['bar_pos']), sample['bar_pos'])
+    # print (i)
+    # print ('******* ----------- *******')
+    # print ('piece: {}, st_bar: {}'.format(sample['piece_id'], sample['st_bar_id']))
+    # print (sample['enc_input'][:8, :16])
+    # print (sample['dec_input'][:16])
+    # print (sample['dec_target'][:16])
+    # print (sample['enc_padding_mask'][:32, :16])
+    # print (sample['length'])
 
-  print("Printing example of train_dloader output...")
-  for i, batch in enumerate(train_dloader):
+  dloader = DataLoader(dset, batch_size=4, shuffle=False, num_workers=24)
+  for i, batch in enumerate(dloader):
     for k, v in batch.items():
       if torch.is_tensor(v):
         print (k, ':', v.dtype, v.size())
-      else:
-        print(k, ':', v)
-    break
     print ('=====================================\n')
-
