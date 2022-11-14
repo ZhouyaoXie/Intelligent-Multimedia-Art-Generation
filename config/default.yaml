@@ -6,13 +6,13 @@ data:
     # vocab_path:       ./pickles/remi_vocab.pkl
     n_token:          404
     data_dir:         MuseMorphose-main/remi_dataset
-    neg_train_split:  remi_splitted/neg_tuples_train.csv
-    neg_val_split:    remi_splitted/neg_tuples_val.csv
-    neg_test_split:   remi_splitted/neg_tuples_test.csv
-    pos_train_split:  remi_splitted/pos_tuples_train.csv
-    pos_val_split:    remi_splitted/pos_tuples_val.csv
-    pos_test_split:   remi_splitted/pos_tuples_test.csv
-    vocab_path:       MuseMorphose-main/pickles/remi_vocab.pkl
+    neg_train_split:  /home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/remi_splitted/neg_tuples_train.csv
+    neg_val_split:    /home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/remi_splitted/neg_tuples_val.csv
+    neg_test_split:   /home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/remi_splitted/neg_tuples_test.csv
+    pos_train_split:  /home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/remi_splitted/pos_tuples_train.csv
+    pos_val_split:    /home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/remi_splitted/pos_tuples_val.csv
+    pos_test_split:   /home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/remi_splitted/pos_tuples_test.csv
+    vocab_path:       pickles/remi_vocab.pkl
     max_bars:         16                 
     enc_seqlen:       128
     dec_seqlen:       1280               
@@ -36,6 +36,7 @@ model:
     pretrained_params_path:      converted_pretrained_weights.pt
     pretrained_optim_path:       null
     use_attr_cls:     False
+    n_token:          404
 
 # x_attention:
 #     num_x_layers:     6
@@ -57,7 +58,7 @@ training:
     ckpt_interval:    50
     log_interval:     10
     val_interval:     50
-    mode:   TRAIN
+    mode:   INFERENCE
     output_path:      outputs/
     max_inference_epoch:  100
     max_inference_loss:   0.01

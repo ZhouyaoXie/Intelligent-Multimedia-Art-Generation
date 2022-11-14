@@ -35,7 +35,7 @@ event2idx = vocab
 
 out_dir = config['generate']['out_dir']
 
-class MusicCLIPInfer(BertPreTrainedModel):
+class MusicCLIPInfer(torch.nn.Module):
     def __init__(
         self,
         model,
@@ -45,10 +45,10 @@ class MusicCLIPInfer(BertPreTrainedModel):
         super().__init__()
         self.model = model
         # freeze MusicCLIP weights during inference
-        for param in self.model.parameters():
-            param.requires_grad = False
-        self.music_config = music_config 
-        self.config = text_config
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
+        # self.music_config = music_config 
+        # self.config = text_config
 
         self._init_music_decoder_from_config(music_config)
 
@@ -169,13 +169,14 @@ class MusicCLIPInfer(BertPreTrainedModel):
 
     # below are methods for music decoder generation 
     def reparameterize(self, mu, logvar, use_sampling=True, sampling_var=1.):
-        std = torch.exp(0.5 * logvar).to(mu.device)
-        if use_sampling:
-            eps = torch.randn_like(std).to(mu.device) * sampling_var
-        else:
-            eps = torch.zeros_like(std).to(mu.device)
+        # std = torch.exp(0.5 * logvar).to(mu.device)
+        # if use_sampling:
+        #     eps = torch.randn_like(std).to(mu.device) * sampling_var
+        # else:
+        #     eps = torch.zeros_like(std).to(mu.device)
 
-        return eps * std + mu
+        # return eps * std + mu
+        return np.ones([128,16,1])
 
     def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
         token_emb = self.model.token_emb(inp)

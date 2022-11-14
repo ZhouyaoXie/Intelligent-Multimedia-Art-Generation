@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 import torch
-
+import sys
 # bert config: https://github.com/deepset-ai/bert-tensorflow/blob/master/samples/bert_config.json
 
 
@@ -102,7 +102,7 @@ def parse_args():
     parser.add_argument("--numWorkers", dest='num_workers', default=0)
 
     # Parse the arguments.
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[2:])
 
     # Bind optimizer class.
     args.optimizer = get_optimizer(args.optim)
