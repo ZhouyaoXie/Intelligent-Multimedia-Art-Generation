@@ -27,7 +27,7 @@ class MusicCLIP(torch.nn.Module):
         self.music_config = music_config 
         self.config = text_config
         self.music_seq_len = music_config['data']['enc_seqlen']
-        self.text_seq_len = 20
+        self.text_seq_len = 128
 
         # initialzie music encoder
         self._init_music_encoder_from_config(music_config)
@@ -43,7 +43,7 @@ class MusicCLIP(torch.nn.Module):
             "bert-base-uncased",
             do_lower_case=True
         )
-        self.max_seq_length = 20
+        self.max_seq_length = 128
 
         #Initialize text encoder
         self.embeddings = BertEmbeddings(text_config)

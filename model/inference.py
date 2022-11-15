@@ -119,12 +119,12 @@ class MusicCLIPInfer(torch.nn.Module):
         # dec_inp = dec_inp.reshape(-1,1)
         dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(device)
         print("\n shape of dec_inp is ", dec_inp.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
-        for n in range(dec_inp.size(1)):
-            # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
-            # -- stores [[start idx of bar #1, sample #1, ..., start idx of bar #K, sample #1, seqlen of sample #1], [same for another sample], ...]
-            for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
-                dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
-                print("\n shape of dec_inp_bar_pos is ", dec_inp_bar_pos.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
+        # for n in range(dec_inp.size(1)):
+        #     # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
+        #     # -- stores [[start idx of bar #1, sample #1, ..., start idx of bar #K, sample #1, seqlen of sample #1], [same for another sample], ...]
+        #     for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
+        #         dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
+        #         print("\n shape of dec_inp_bar_pos is ", dec_inp_bar_pos.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
 
         if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
             dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
@@ -169,12 +169,14 @@ class MusicCLIPInfer(torch.nn.Module):
         lang_feats, lang_attention_mask = self.model.encode_text(
             text, token_type_ids
         )
+        #extend the music emb output to text emb output
+        music_feats = self.model.out_proj(music_feats)
         # Run cross-modality layers
         for layer_module in self.model.x_layers:
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
-        pooled_output = self.pooler(lang_feats)
+        pooled_output = self.model.pooler(lang_feats)
         
         return lang_feats, music_feats , pooled_output
  

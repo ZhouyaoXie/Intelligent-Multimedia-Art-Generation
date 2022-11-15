@@ -291,7 +291,7 @@ class BertAttention(nn.Module):
 		self.attention_head_size = int(
 			config.hidden_size / config.num_attention_heads)
 		self.all_head_size = self.num_attention_heads * self.attention_head_size
-		self.text_seq_len, self.music_seq_len = 20, 128
+		self.text_seq_len, self.music_seq_len = 128, 128
 
 		# visual_dim = 2048
 		if ctx_dim is None:
