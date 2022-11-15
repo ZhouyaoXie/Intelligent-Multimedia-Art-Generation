@@ -34,18 +34,24 @@ config_path = "config/default.yaml"
 # contrastive loss if music and text match 
 POSITIVE = 1
 
-music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-model_out_path = music_config['training']['output_path']
-bs = music_config["data"]["batch_size"]
-epochs = music_config['training']['max_epochs']
-lr = music_config['training']['max_lr']
-# max number of epochs to train the decoder on during inference
-MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
-# stop decoder training if the contrastive loss is smaller than this value
-MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
+# music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+# model_out_path = music_config['training']['output_path']
+# bs = music_config["data"]["batch_size"]
+# epochs = music_config['training']['max_epochs']
+# lr = music_config['training']['max_lr']
+# # max number of epochs to train the decoder on during inference
+# MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
+# # stop decoder training if the contrastive loss is smaller than this value
+# MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
+
 
 
 def _train(music_config, text_args):
+    model_out_path = music_config['training']['output_path']
+    bs = music_config["data"]["batch_size"]
+    epochs = music_config['training']['max_epochs']
+    lr = music_config['training']['max_lr']
+    
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     if 'n_token' not in music_config['data'] or music_config['data']['n_token'] is None:
         music_config['data']['n_token'] = train_dset.vocab_size   # 333 in musemorphose; 404 in our data
@@ -111,6 +117,15 @@ def _train(music_config, text_args):
 
 
 def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
+    model_out_path = music_config['training']['output_path']
+    bs = music_config["data"]["batch_size"]
+    epochs = music_config['training']['max_epochs']
+    lr = music_config['training']['max_lr']
+    # max number of epochs to train the decoder on during inference
+    MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
+    # stop decoder training if the contrastive loss is smaller than this value
+    MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
+    
     # get input params for inference
     train_dset, _, _, train_dloader, _, _ = get_dataloader(music_config)
     dec_inp = train_dset[0]['dec_input'].permute(1, 0).to(device)
