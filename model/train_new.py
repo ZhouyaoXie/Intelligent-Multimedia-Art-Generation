@@ -144,7 +144,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # initialize training optimizer and loss
     optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 5e-4)
     c_loss = ContrastiveLoss(bs)
-    # c_loss = torch.nn.CrossEntropyLoss()
+    c_loss = torch.nn.CrossEntropyLoss()
 
     start_time  = time.time()
     infer_model.train()
@@ -160,8 +160,10 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
             polyph_cls
         )
         print("shaped of the pooled output shape  is ", pooled_output.shape)
-        # loss = c_loss(pooled_output, torch.tensor(np.ones(pooled_output.shape[0])))
-        loss = c_loss(lang_feats, music_feats, POSITIVE)
+        y = torch.tensor(np.ones(pooled_output.shape[0]))
+        # y = y.type(torch.LongTensor)
+        loss = c_loss(pooled_output.reshape(-1), y)
+        # loss = c_loss(lang_feats, music_feats, POSITIVE)
 
         print("loss", loss.item())
         if loss < MAX_INFERENCE_LOSS:

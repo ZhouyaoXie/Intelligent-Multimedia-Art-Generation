@@ -51,6 +51,8 @@ class MusicCLIPInfer(torch.nn.Module):
         # self.config = text_config
 
         self._init_music_decoder_from_config(music_config)
+        self.pooled_proj = nn.Linear(text_config.hidden_size, torch.tensor(1))
+
 
 
     def _init_music_decoder_from_config(self, config):
@@ -177,6 +179,8 @@ class MusicCLIPInfer(torch.nn.Module):
                                                   music_feats, music_attention_mask)
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         pooled_output = self.model.pooler(lang_feats)
+        pooled_output =  self.pooled_proj(pooled_output)
+        
         
         return lang_feats, music_feats , pooled_output
  
