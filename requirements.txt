@@ -13,3 +13,4 @@ requests
 transformers
 boto3
 botocore
+tensorflow
