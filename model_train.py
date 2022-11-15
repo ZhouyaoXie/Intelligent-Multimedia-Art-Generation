@@ -49,4 +49,4 @@ if __name__ == "__main__":
     print("max_lr: ", data_config["training"]["max_lr"])
     print("min_lr: ", data_config["training"]["min_lr"])
     
-    # train(music_config = data_config, text_config = text_args)
+    train(music_config = data_config, text_config = text_args)
