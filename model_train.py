@@ -6,11 +6,11 @@ import numpy as np
 import tqdm
 
 # import module from the same directory
-# from model.model import MusicCLIP
-# from dataloader.dataloader_updated import get_dataloader
+from model.model import MusicCLIP
+from dataloader.dataloader_updated import get_dataloader
 
-# from model.train_new import train
-# from config.text_config import text_args
+from model.train_new import train
+from config.text_config import text_args
 
 
 print("loading config...")
