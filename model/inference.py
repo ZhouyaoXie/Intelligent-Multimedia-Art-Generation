@@ -55,6 +55,7 @@ class MusicCLIPInfer(torch.nn.Module):
 
     def _init_music_decoder_from_config(self, config):
         self.dec_out_proj = nn.Linear(config['model']['dec_d_model'], config['model']['n_token'])
+        self.d_vae_latent = config["model"]["d_latent"]
 
         if config['model']['use_attr_cls']:
             self.decoder = VAETransformerDecoder(
@@ -101,8 +102,12 @@ class MusicCLIPInfer(torch.nn.Module):
         enc_n_bars = config['data']['max_bars'], 
     ):
         #decoder part
-        mu = 0
-        logvar = 1
+        token_emb = self.model.token_emb(dec_inp)
+        dec_inp = self.model.emb_dropout(token_emb) + self.model.pe(dec_inp.size(0))
+
+
+        mu = torch.tensor(0)
+        logvar = torch.tensor(1)
         vae_latent = self.reparameterize(mu, logvar)
         # enc_bt_size & enc_n_bars come from: enc_inp.size(1), enc_inp.size(2)
         # enc_inp is 'enc_input' in dataset
@@ -110,12 +115,16 @@ class MusicCLIPInfer(torch.nn.Module):
         vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
 
         # [shape of dec_inp] (seqlen_per_sample, bsize)
-        dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(vae_latent.device)
+        print("shape of dec_input is ", dec_inp.shape)
+        # dec_inp = dec_inp.reshape(-1,1)
+        dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(device)
+        print("\n shape of dec_inp is ", dec_inp.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
         for n in range(dec_inp.size(1)):
             # [shape of dec_inp_bar_pos] (bsize, n_bars_per_sample + 1)
             # -- stores [[start idx of bar #1, sample #1, ..., start idx of bar #K, sample #1, seqlen of sample #1], [same for another sample], ...]
             for b, (st, ed) in enumerate(zip(dec_inp_bar_pos[n, :-1], dec_inp_bar_pos[n, 1:])):
                 dec_seg_emb[st:ed, n, :] = vae_latent_reshaped[n, b, :]
+                print("\n shape of dec_inp_bar_pos is ", dec_inp_bar_pos.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
 
         if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
             dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
@@ -124,6 +133,9 @@ class MusicCLIPInfer(torch.nn.Module):
         else:
             dec_seg_emb_cat = dec_seg_emb
 
+        print("\n\n Before passing the values to the decoder \n\n")
+        print("the sahpe of dec_inp is ", dec_inp.shape)
+        print("the shape of dec_seg_emb_cat", dec_seg_emb_cat.shape)
         dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
         dec_logits = self.dec_out_proj(dec_out)
 
@@ -176,7 +188,7 @@ class MusicCLIPInfer(torch.nn.Module):
         #     eps = torch.zeros_like(std).to(mu.device)
 
         # return eps * std + mu
-        return np.ones([128,16,1])
+        return torch.tensor(np.ones([128,16,1]))
 
     def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
         token_emb = self.model.token_emb(inp)

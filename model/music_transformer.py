@@ -147,6 +147,9 @@ class VAETransformerDecoder(nn.Module):
     out = x
     for i in range(self.n_layer):
       if self.cond_mode == 'in-attn':
+        print("\n\n In Music Transformer, \n")
+        print("shape of out is ", out.shape)
+        print("shape of seg_emb is ", seg_emb.shape)
         out += seg_emb
       out = self.decoder_layers[i](out, src_mask=attn_mask)
 

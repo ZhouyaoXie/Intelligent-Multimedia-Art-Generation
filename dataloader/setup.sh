@@ -3,7 +3,7 @@
 # bash script to set up dataset and dataloader 
 
 # install dependencies
-pip3 install -r requirements.txt
+# pip3 install -r requirements.txt
 
 # download the musemorphose-main folder
 gdown --fuzzy https://drive.google.com/file/d/1kvjs-XDdCOpyTFZ0UUi5SNVNldeStTna/view?usp=sharing

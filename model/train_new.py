@@ -115,19 +115,20 @@ def _train(music_config, text_args):
 
 def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # get input params for inference
-    # train_dset, _, _, train_dloader, _, _ = get_dataloader(music_config)
-    # dec_inp = train_dset[0]['dec_input'].permute(1, 0).to(device)
-    # dec_inp_bar_pos = train_dset[0]['bar_pos'].to(device)
-    # rfreq_cls = train_dset[0]['rhymfreq_cls'].permute(1, 0).to(device)
-    # polyph_cls = train_dset[0]['polyph_cls'].permute(1, 0).to(device)
+    train_dset, _, _, train_dloader, _, _ = get_dataloader(music_config)
+    # train_dset = torch.tensor(train_dset)
+    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).permute(1,0).to(device)
+    dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
+    rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
+    polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
-    dec_inp = np.array([1])
-    dec_inp_bar_pos = np.array([1])
+    # dec_inp = np.array([1])
+    # dec_inp_bar_pos = np.array([1])
 
 
     # load saved MusicCLIP model
-    model = None
-    # model = MusicCLIP(music_config, text_args)
+    # model = None
+    model = MusicCLIP(music_config, text_args)
     # if model_save_path is None:
     #     model_save_path = model_out_path + "epoch{epoch}_bs{bs}_lr{lr}.pt".format(
     #         epoch = epochs, bs = bs, lr = lr,
@@ -195,4 +196,4 @@ def train(music_config, text_config = text_args):
 
 # def __main__():
 #     train(music_config, text_args)
-train(music_config, text_args)
+# train(music_config, text_args)
