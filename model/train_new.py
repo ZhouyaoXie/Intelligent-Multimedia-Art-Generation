@@ -1,3 +1,4 @@
+import os
 import time
 import random
 import numpy as np
@@ -52,6 +53,9 @@ def _train(music_config, text_args):
     epochs = music_config['training']['max_epochs']
     lr = music_config['training']['max_lr']
     
+    if not os.path.exists(model_out_path):
+        os.makedirs(model_out_path)
+        
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     if 'n_token' not in music_config['data'] or music_config['data']['n_token'] is None:
         music_config['data']['n_token'] = train_dset.vocab_size   # 333 in musemorphose; 404 in our data
