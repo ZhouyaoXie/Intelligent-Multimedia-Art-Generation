@@ -388,8 +388,8 @@ def get_dataloader(data_config):
       model_max_bars=data_config['data']['max_bars'], 
       model_dec_seqlen=data_config['data']['enc_seqlen'], 
       model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
+      min_pitch=0, 
+      max_pitch=127,
       pos_map=pos_train, 
       neg_map=neg_train,
     )
@@ -403,8 +403,8 @@ def get_dataloader(data_config):
       model_max_bars=data_config['data']['max_bars'], 
       model_dec_seqlen=data_config['data']['enc_seqlen'], 
       model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
+      min_pitch=0, 
+      max_pitch=127,
       pos_map=pos_val, 
       neg_map=neg_val,
     )
@@ -418,8 +418,8 @@ def get_dataloader(data_config):
       model_max_bars=data_config['data']['max_bars'], 
       model_dec_seqlen=data_config['data']['enc_seqlen'], 
       model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
+      min_pitch=0, 
+      max_pitch=127,
       pos_map=pos_test, 
       neg_map=neg_test,
     )
