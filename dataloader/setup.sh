@@ -20,8 +20,10 @@ rm remi_dataset_0926_updated.tar.gz
 
 # remove original remi_vocab.pkl and replace with ours
 rm MuseMorphose-main/pickles/remi_vocab.pkl
-gdown --fuzzy https://drive.google.com/file/d/15GIjOpW4biMXanUDcE8W7ZHQ0Jcyph7E/view?usp=sharing
-mv remi_vocab.pkl MuseMorphose-main/pickles/
+# gdown --fuzzy https://drive.google.com/file/d/15GIjOpW4biMXanUDcE8W7ZHQ0Jcyph7E/view?usp=sharing  # original remi_vocab with 404 tokens
+# mv remi_vocab.pkl MuseMorphose-main/pickles/
+gdown --fuzzy https://drive.google.com/file/d/1b5bOUgo5_0QOWwNGm2iKB0H1KK02VMCX/view?usp=share_link  # updated on 1116 with 406 tokens
+mv remi_vocab_updated.pkl MuseMorphose-main/pickles/remi_vocab.pkl
 
 # download no_events_fn.txt where we store files that we do not consider 
 # because they have no events between some consecutive bars
