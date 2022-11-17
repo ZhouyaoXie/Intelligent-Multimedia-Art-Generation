@@ -48,5 +48,7 @@ gdown --folder https://drive.google.com/drive/folders/13UbMp_Q0PvnPsVNs7Aw4RWeiw
 
 
 ## To start training process:
+
 bash setup.sh
+
 python3 model_train.py
