@@ -20,8 +20,10 @@ config_path = "config/default.yaml"
 def parse_args(args=None, namespace=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description='model_train.py')
-    parser.add_argument('--output_path', type=str, required=True, help="Output path.")
-    parser.add_argument('--mode', type=str, required=True, help="TRAIN or INFERENCE.")
+#     parser.add_argument('--output_path', type=str, required=True, help="Output path.")
+#     parser.add_argument('--mode', type=str, required=True, help="TRAIN or INFERENCE.")
+    parser.add_argument('--output_path', type=str, default="outputs/", help="Output path.")
+    parser.add_argument('--mode', type=str, default="TRAIN", help="TRAIN or INFERENCE.")
     parser.add_argument('--max_lr', type=float, default=1.0e-4, help="Max learning rate.")
     parser.add_argument('--min_lr', type=float, default=5.0e-6, help="Min learning rate.")
     parser.add_argument('--batch_size', type=int, default=4, help="Batch size.")
