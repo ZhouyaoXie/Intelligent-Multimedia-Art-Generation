@@ -79,7 +79,10 @@ def _train(music_config, text_args):
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
       optimizer, lr_decay_steps, eta_min=min_lr
     )  # added (same as musemorphose)
+
     c_loss = ContrastiveLoss(bs)
+    if DEBUG:
+        c_loss = torch.nn.CrossEntropyLoss()
 
     model.zero_grad()
 
@@ -189,9 +192,6 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay = 5e-4)
 
     c_loss = ContrastiveLoss(bs)
-
-    if DEBUG:
-        c_loss = torch.nn.CrossEntropyLoss()
 
     start_time  = time.time()
     infer_model.train()
