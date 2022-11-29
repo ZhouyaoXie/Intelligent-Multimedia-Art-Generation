@@ -22,6 +22,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print("the set device is ", device)
 
+DEBUG = True 
+if DEBUG:
+    print("=" * 30 + "\nWARNING: DEBUG MODE\n" + "=" * 30)
+
 #setting the seeds
 GLOBAL_SEED = 1
 random.seed(GLOBAL_SEED)
@@ -111,8 +115,17 @@ def _train(music_config, text_args):
                 padding_mask=batch_padding_mask,
                 music_attention_mask = None,
             )
-            # print('y', y)
-            loss = c_loss(music_feats, lang_feats, y)
+
+            if not DEBUG:
+                loss = c_loss(music_feats, lang_feats, y)
+            else:
+                pooled_output =  model.pooled_proj(pooled_output)
+                try:
+                    loss = c_loss(pooled_output.reshape(-1), y)
+                except Exception as e:
+                    print(str(e))
+                    print("Shape of pooled_output: ", pooled_output.shape, "; shape of y: ", y.shape)
+
             # anneal learning rate, added
             if trained_steps < lr_warmup_steps:
                 curr_lr = lr * trained_steps / lr_warmup_steps
@@ -123,7 +136,7 @@ def _train(music_config, text_args):
             loss.backward()
             optimizer.step()
 #             print("loss", loss.item())
-            #training accuracy
+            # training accuracy
             if batch_idx % 1000 == 0:
                 print("batch_idx:", batch_idx, "loss:", loss.item())
 
@@ -174,7 +187,11 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
 
     # initialize training optimizer and loss
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay = 5e-4)
+
     c_loss = ContrastiveLoss(bs)
+
+    if DEBUG:
+        c_loss = torch.nn.CrossEntropyLoss()
 
     start_time  = time.time()
     infer_model.train()
@@ -187,7 +204,6 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
             rfreq_cls, 
             polyph_cls
         )
-        
         loss = c_loss(pooled_output, POSITIVE)
         print("loss", loss.item())
         if loss < MAX_INFERENCE_LOSS:

@@ -31,6 +31,9 @@ class MusicCLIP(torch.nn.Module):
 
         # initialzie music encoder
         self._init_music_encoder_from_config(music_config)
+        
+        # if using cross entropy loss, need to convert bertpooler output to one value
+        self.pooled_proj = nn.Linear(text_config.hidden_size, torch.tensor(1))
 
         # initialize cross attention layers
         # self.num_x_layers = music_config['x_attention']['num_x_layers']
