@@ -18,6 +18,8 @@ from config.text_config import text_args
 from model.inference import MusicCLIPInfer
 from .contrastive_loss import ContrastiveLoss
 
+from tqdm import tqdm
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print("the set device is ", device)
@@ -66,7 +68,7 @@ def _train(music_config, text_args):
     model.train()
     for epoch in range(epochs):
         print("Starting epoch ", epoch)
-        for batch_idx, batch_samples in enumerate(train_dloader):
+        for batch_idx, batch_samples in tqdm(enumerate(train_dloader)):
             model.zero_grad()
             batch_enc_inp = batch_samples['enc_input'].permute(2, 0, 1).to(device)
             batch_dec_inp = batch_samples['dec_input'].permute(1, 0).to(device)
