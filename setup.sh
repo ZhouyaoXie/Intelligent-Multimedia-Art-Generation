@@ -4,8 +4,8 @@
 echo "install dependencies"
 pip3 install -r requirements.txt
 
-echo "download musemorphose pretrained weights"
-wget -O musemorphose_pretrained_weights.pt https://zenodo.org/record/5119525/files/musemorphose_pretrained_weights.pt?download=1
+# echo "download musemorphose pretrained weights"
+# wget -O musemorphose_pretrained_weights.pt https://zenodo.org/record/5119525/files/musemorphose_pretrained_weights.pt?download=1
 
 echo "download musemorphose converted weights"
 # gdown --fuzzy https://drive.google.com/file/d/15v5tRmOueYUg0pxrdX1i29KrxrzjjA4v/view?usp=sharing
