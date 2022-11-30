@@ -94,7 +94,8 @@ def _train(music_config, text_args):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            print("loss", loss.item())
+            if batch_idx % 1000 == 0:
+                print("Current batch:", batch_idx, "loss:", loss.item())
             #training accuracy
 
         # save model checkpoint after every epoch
