@@ -27,13 +27,10 @@ class MusicCLIP(torch.nn.Module):
         self.music_config = music_config 
         self.config = text_config
         self.music_seq_len = music_config['data']['enc_seqlen']
-        self.text_seq_len = 20
+        self.text_seq_len = 128
 
         # initialzie music encoder
         self._init_music_encoder_from_config(music_config)
-        
-        # if using cross entropy loss, need to convert bertpooler output to one value
-        self.pooled_proj = nn.Linear(text_config.hidden_size, torch.tensor(1))
 
         # initialize cross attention layers
         # self.num_x_layers = music_config['x_attention']['num_x_layers']
@@ -46,7 +43,7 @@ class MusicCLIP(torch.nn.Module):
             "bert-base-uncased",
             do_lower_case=True
         )
-        self.max_seq_length = 20
+        self.max_seq_length = 128
 
         #Initialize text encoder
         self.embeddings = BertEmbeddings(text_config)
@@ -252,6 +249,11 @@ class MusicCLIP(torch.nn.Module):
         pooled_output = self.pooler(lang_feats)
 
         return lang_feats, music_feats , pooled_output, lang_attention_mask
+
+    def music_pool(self, music_feats):
+        first_token_tensor = music_feats[:, 0]
+        pooled_output = F.softmax(first_token_tensor) # [bs, emb_dim]
+        return pooled_output
 
 
 class InputFeatures(object):

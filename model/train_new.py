@@ -1,8 +1,10 @@
-import os
 import time
 import random
 import numpy as np
 import yaml 
+import os, sys
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 import torch
 import torch.optim as optim
@@ -16,15 +18,9 @@ from config.text_config import text_args
 from model.inference import MusicCLIPInfer
 from .contrastive_loss import ContrastiveLoss
 
-from tqdm import tqdm
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print("the set device is ", device)
-
-DEBUG = True 
-if DEBUG:
-    print("=" * 30 + "\nWARNING: DEBUG MODE\n" + "=" * 30)
 
 #setting the seeds
 GLOBAL_SEED = 1
@@ -40,33 +36,19 @@ config_path = "config/default.yaml"
 
 # contrastive loss if music and text match 
 POSITIVE = 1
-music_config_global = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-trained_steps = music_config_global['training']['trained_steps']
 
-# music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-# model_out_path = music_config['training']['output_path']
-# bs = music_config["data"]["batch_size"]
-# epochs = music_config['training']['max_epochs']
-# lr = music_config['training']['max_lr']
-# # max number of epochs to train the decoder on during inference
-# MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
-# # stop decoder training if the contrastive loss is smaller than this value
-# MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
-
+music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+model_out_path = music_config['training']['output_path']
+bs = music_config["data"]["batch_size"]
+epochs = music_config['training']['max_epochs']
+lr = music_config['training']['max_lr']
+# max number of epochs to train the decoder on during inference
+MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
+# stop decoder training if the contrastive loss is smaller than this value
+MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
 
 
 def _train(music_config, text_args):
-    model_out_path = music_config['training']['output_path']
-    bs = music_config["data"]["batch_size"]
-    epochs = music_config['training']['max_epochs']
-    lr = music_config['training']['max_lr']
-    min_lr = music_config['training']['min_lr']
-    lr_decay_steps = music_config['training']['lr_decay_steps']
-    lr_warmup_steps = music_config['training']['lr_warmup_steps']
-    
-    if not os.path.exists(model_out_path):
-        os.makedirs(model_out_path)
-        
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     if 'n_token' not in music_config['data'] or music_config['data']['n_token'] is None:
         music_config['data']['n_token'] = train_dset.vocab_size   # 333 in musemorphose; 404 in our data
@@ -76,13 +58,7 @@ def _train(music_config, text_args):
 
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay = 5e-4)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(
-      optimizer, lr_decay_steps, eta_min=min_lr
-    )  # added (same as musemorphose)
-
     c_loss = ContrastiveLoss(bs)
-    if DEBUG:
-        c_loss = torch.nn.CrossEntropyLoss()
 
     model.zero_grad()
 
@@ -90,9 +66,7 @@ def _train(music_config, text_args):
     model.train()
     for epoch in range(epochs):
         print("Starting epoch ", epoch)
-        for batch_idx, batch_samples in tqdm(enumerate(train_dloader)):
-            if batch_idx > 0.1 * len(train_dloader):
-                break
+        for batch_idx, batch_samples in enumerate(train_dloader):
             model.zero_grad()
             batch_enc_inp = batch_samples['enc_input'].permute(2, 0, 1).to(device)
             batch_dec_inp = batch_samples['dec_input'].permute(1, 0).to(device)
@@ -103,10 +77,7 @@ def _train(music_config, text_args):
             # text = torch.Tensor(batch_samples['text_label']).permute(1, 0).to(device)
             text = batch_samples['text_label']
             y = batch_samples['pos'].float().to(device)
-            
-            global trained_steps
-            trained_steps += 1
-            
+
             lang_feats, music_feats, pooled_output, lang_attention_mask = model(
                 text,
                 batch_enc_inp, 
@@ -118,30 +89,13 @@ def _train(music_config, text_args):
                 padding_mask=batch_padding_mask,
                 music_attention_mask = None,
             )
-
-            if not DEBUG:
-                loss = c_loss(music_feats, lang_feats, y)
-            else:
-                pooled_output =  model.pooled_proj(pooled_output)
-                try:
-                    loss = c_loss(pooled_output.reshape(-1), y)
-                except Exception as e:
-                    print(str(e))
-                    print("Shape of pooled_output: ", pooled_output.shape, "; shape of y: ", y.shape)
-
-            # anneal learning rate, added
-            if trained_steps < lr_warmup_steps:
-                curr_lr = lr * trained_steps / lr_warmup_steps
-                optimizer.param_groups[0]['lr'] = curr_lr
-            else:
-                scheduler.step(trained_steps - lr_warmup_steps)
+            music_pooled = model.music_pool(music_feats)
+            loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-#             print("loss", loss.item())
-            # training accuracy
-            if batch_idx % 1000 == 0:
-                print("batch_idx:", batch_idx, "loss:", loss.item())
+            print("loss", loss.item())
+            #training accuracy
 
         # save model checkpoint after every epoch
         torch.save({'epoch': epoch,
@@ -160,41 +114,42 @@ def _train(music_config, text_args):
 
 
 def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
-    model_out_path = music_config['training']['output_path']
-    bs = music_config["data"]["batch_size"]
-    epochs = music_config['training']['max_epochs']
-    lr = music_config['training']['max_lr']
-    # max number of epochs to train the decoder on during inference
-    MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
-    # stop decoder training if the contrastive loss is smaller than this value
-    MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
-    
     # get input params for inference
     train_dset, _, _, train_dloader, _, _ = get_dataloader(music_config)
-    dec_inp = train_dset[0]['dec_input'].permute(1, 0).to(device)
-    dec_inp_bar_pos = train_dset[0]['bar_pos'].to(device)
-    rfreq_cls = train_dset[0]['rhymfreq_cls'].permute(1, 0).to(device)
-    polyph_cls = train_dset[0]['polyph_cls'].permute(1, 0).to(device)
+    # train_dset = torch.tensor(train_dset)
+    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).permute(1,0).to(device)
+    dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
+    rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
+    polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
+    # dec_inp = np.array([1])
+    # dec_inp_bar_pos = np.array([1])
+
+
     # load saved MusicCLIP model
+    # model = None
     model = MusicCLIP(music_config, text_args)
-    if model_save_path is None:
-        model_save_path = model_out_path + "epoch{epoch}_bs{bs}_lr{lr}.pt".format(
-            epoch = epochs, bs = bs, lr = lr,
-        )
-    model.load_state_dict(torch.load(model_save_path))
-    model.eval()
+    # if model_save_path is None:
+    #     model_save_path = model_out_path + "epoch{epoch}_bs{bs}_lr{lr}.pt".format(
+    #         epoch = epochs, bs = bs, lr = lr,
+    #     )
+    # model.load_state_dict(torch.load(model_save_path))
+    # model.eval()
+
+    print("\n\n\nStarting the inference pipeline\n\n\n")
 
     # initiate MusicCLIPInfer model
     infer_model = MusicCLIPInfer(model, music_config, text_args)
 
     # initialize training optimizer and loss
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay = 5e-4)
-
+    optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 5e-4)
     c_loss = ContrastiveLoss(bs)
+    c_loss = torch.nn.CrossEntropyLoss()
 
     start_time  = time.time()
     infer_model.train()
+    rfreq_cls = None
+    polyph_cls =None
     for epoch in range(MAX_INFERENCE_EPOCH):
         print("Starting epoch ", epoch)
         lang_feats, music_feats, pooled_output = infer_model(
@@ -204,7 +159,12 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
             rfreq_cls, 
             polyph_cls
         )
-        loss = c_loss(pooled_output, POSITIVE)
+        print("shaped of the pooled output shape  is ", pooled_output.shape)
+        y = torch.tensor(np.ones(pooled_output.shape[0]))
+        # y = y.type(torch.LongTensor)
+        loss = c_loss(pooled_output.reshape(-1), y)
+        # loss = c_loss(lang_feats, music_feats, POSITIVE)
+
         print("loss", loss.item())
         if loss < MAX_INFERENCE_LOSS:
             break 
@@ -233,6 +193,10 @@ def train(music_config, text_config = text_args):
     if mode == "TRAIN":
         _train(music_config, text_config)
     elif mode == "INFERENCE":
-        _inf()
+        _inf("the test case", music_config, text_config)
     else:
         raise ValueError("Unrecognized mode!")
+
+# def __main__():
+#     train(music_config, text_args)
+# train(music_config, text_args)

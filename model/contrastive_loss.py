@@ -20,6 +20,8 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F
 
+from matplotlib import pyplot as plt 
+
 class ContrastiveLoss(nn.Module):
     def __init__(self, batch_size, temperature = 1, alpha = 0.5, reduction = 'mean'):
         super().__init__()
@@ -46,40 +48,40 @@ class ContrastiveLoss(nn.Module):
         # process input first 
         y1, y2 = embed[::2, :], embed[1::2, :]
         x1 = query[::2, :]
-        loss = 0
-        bs = x1.size()[0]
-        for b in range(bs):
-            loss += self._loss(x1[b, :], y1[b, :], y2[b, :], norm)
-        return loss / bs
+        loss = self._loss(x1, y1, y2, norm)
+        # print('loss: ', loss)
+        return loss
 
         
     def _loss(self, x1, y1, y2, norm):
         if norm:
             x1, y1, y2 = self.normalize(x1, y1, y2)
-        
-        if y2 is not None:
-            # Explicit negative keys
 
-            # print('x1 size', x1.size())
-            # print('y1 y2 size', y1.size(), y2.size())
+        # print('x1 size', x1.size())    # (bs, emb_dim)
+        N, D = x1.shape[0], x1.shape[1]
+        y2 = y2.reshape((N, 1, D))  # (bs, num_neg_examples, emb_dim)
+        # print('y1 y2 size', y1.size(), y2.size())
 
-            # Cosine between positive pairs
-            positive_logit = torch.sum(x1 * y1, dim=1, keepdim=True)
+        # Cosine between positive pairs
+        positive_logit = torch.sum(x1 * y1, dim=1, keepdim=True)
+        # print('positive logits shape: ', positive_logit.shape)  # should be (bs, 1)
 
-            # Cosine between all x1-negative combinations
-            negative_logits = x1 @ self.transpose(y2)
+        # print('x1 shape, y2 shape: ', x1.shape, y2.shape)
+        x1 = x1.unsqueeze(1)
+        # print('x1 shape: ', x1.shape)  # should be (bs, 1, emb_dim) @ (bs, emb_dim, num_neg_examples)
+        # print('y2 trans shape: ', y2.shape)
 
-            # First index in last dimension are the positive samples
-            logits = torch.cat([positive_logit, negative_logits], dim=1)
-            labels = torch.zeros(len(logits), dtype=torch.long, device=x1.device)
-        else:
-            # Negative keys are implicitly off-diagonal positive keys.
+        negative_logits = x1 @ self.transpose(y2)
+        # print('negative logits shape: ', negative_logits.shape) # should be (bs, 1, num_neg_examples)
 
-            # Cosine between all combinations
-            logits = x1 @ self.transpose(y1)
+        negative_logits = negative_logits.squeeze(1)  # should be (bs, num_neg_examples)
+        # print('negative logits shape: ', negative_logits.shape)
 
-            # Positive keys are the entries on the diagonal
-            labels = torch.arange(len(x1), device=x1.device)
+        # First index in last dimension are the positive samples
+        logits = torch.cat([positive_logit, negative_logits], dim=1)
+        labels = torch.zeros(len(logits), dtype=torch.long, device=x1.device)
+
+        # print(logits.shape, labels.shape)
 
         return F.cross_entropy(logits / self.temperature, labels, reduction=self.reduction)
 
@@ -92,26 +94,16 @@ class ContrastiveLoss(nn.Module):
 
 # test 
 if __name__ == "__main__":
-    loss = ContrastiveLoss(batch_size = 3)
+    bs, seq_len, emb_dim = 4, 128, 786
+    loss = ContrastiveLoss(batch_size = bs)
+    random_loss = []
+    for _ in range(100):
+        music_pooled = torch.rand((bs, emb_dim), dtype=torch.float64)
+        text_pooled = torch.rand((bs, emb_dim), dtype=torch.float64)
+        random_label = torch.randint(0, 2, (bs,))
+        random_loss.append(loss(music_pooled, text_pooled, random_label, norm = True))
 
-    x1 = torch.Tensor([[0, 0, 0.8, 0.7, 0],
-                       [0.7, 0.9, 0, 0, 0],
-                       [0.7, 0.9, 0, 0, 0]])
-    y1 = torch.Tensor([[0.1, 0.2, 1, 1, 0.1],
-                        [0.8, 0.7, 0, 0, 0],
-                        [0.8, 0.7, 0, 0, 0]])
-    y2 = torch.Tensor([[0.9, 0.8, 0.1, 0, 0.9],
-                        [0.1, 0.1, 0.9, 0.8, 0.9],
-                        [0.1, 0, 0.9, 1, 1],])
-    print('this loss should be small: ', loss._loss(x1, y1, y2))
+    print(random_loss)
 
-    x1 = torch.Tensor([[0, 0, 0.8, 0.7, 0],
-                       [0.7, 0.9, 0, 0, 0],
-                       [0.7, 0.9, 0, 0, 0]])
-    y1 = torch.Tensor([[0.9, 1, 0, 0.1, 1],
-                        [0.1, 0.2, 0.5, 0.6, 0.5],
-                        [0, 0.1, 0.9, 0.8, 0.7]])
-    y2 = torch.Tensor([[0.1, 0.2, 0.9, 0.9, 0.3],
-                        [0.6, 0.7, 0.2, 0.1, 0.2],
-                        [0.8, 0.7, 0.2, 0.1, 0.2]])
-    print('this loss should be big: ', loss._loss(x1, y1, y2))
+    plt.hist(random_loss)
+    plt.show()
