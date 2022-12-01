@@ -20,6 +20,8 @@ from .cross_attn import MusicClIPXLayer
 from .utils import nucleus, pickle_load, numpy_to_tensor, temperatured_softmax, tensor_to_numpy, get_beat_idx, word2event
 from .remi2midi import remi2midi
 
+import torch.nn.functional as F
+
 
 config_path = "config/default.yaml"
 config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
@@ -171,6 +173,17 @@ class MusicCLIPInfer(torch.nn.Module):
         lang_feats, lang_attention_mask = self.model.encode_text(
             text, token_type_ids
         )
+
+
+        lang_feats = F.pad(
+            input=lang_feats, 
+            pad = (0, 0, 0, self.model.music_seq_len - self.model.text_seq_len, 0, 0)
+        )
+        #Run language layers from pretrianed bert
+        lang_feats = self.model.bert(lang_feats, lang_attention_mask)
+
+
+
         #extend the music emb output to text emb output
         music_feats = self.model.out_proj(music_feats)
         # Run cross-modality layers
@@ -187,14 +200,14 @@ class MusicCLIPInfer(torch.nn.Module):
 
     # below are methods for music decoder generation 
     def reparameterize(self, mu, logvar, use_sampling=True, sampling_var=1.):
-        # std = torch.exp(0.5 * logvar).to(mu.device)
-        # if use_sampling:
-        #     eps = torch.randn_like(std).to(mu.device) * sampling_var
-        # else:
-        #     eps = torch.zeros_like(std).to(mu.device)
+        std = torch.exp(0.5 * logvar).to(mu.device)
+        if use_sampling:
+            eps = torch.randn_like(std).to(mu.device) * sampling_var
+        else:
+            eps = torch.zeros_like(std).to(mu.device)
 
-        # return eps * std + mu
-        return torch.tensor(np.ones([128,16,1]))
+        return eps * std + mu
+        # return torch.tensor(np.ones([128,16,1]))
 
     def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
         token_emb = self.model.token_emb(inp)
@@ -209,7 +222,7 @@ class MusicCLIPInfer(torch.nn.Module):
     def get_sampled_latent_inference(self, sampling_var=0.):
         mu = 0
         logvar =1 
-        mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
+        # mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
         vae_latent = self.reparameterize(mu, logvar, sampling_var=sampling_var)
 
         return vae_latent
@@ -353,7 +366,7 @@ class MusicCLIPInfer(torch.nn.Module):
             p_latents = self.get_sampled_latent_inference()
             song, t_sec, entropies = self.generate_on_latent_ctrl_vanilla_truncate(
                                         p_latents, event2idx, idx2event,
-                                        p_rfreq_cls = None, p_polyph_cls = None, 
+                                        rfreq_cls = None, polyph_cls = None, 
                                         max_input_len=config['generate']['max_input_dec_seqlen'], 
                                         truncate_len=min(512, config['generate']['max_input_dec_seqlen'] - 32), 
                                         nucleus_p=config['generate']['nucleus_p'], 
