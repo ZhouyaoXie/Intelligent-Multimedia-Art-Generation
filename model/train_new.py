@@ -3,6 +3,7 @@ import random
 import numpy as np
 import yaml 
 import os, sys
+import pickle
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
@@ -49,6 +50,9 @@ MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
 # stop decoder training if the contrastive loss is smaller than this value
 MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
 
+def save_loss(losses, epoch):
+    with open(f"{model_out_path}epoch{epoch}_losses", "wb") as f:
+        pickle.dump(losses, f)
 
 def _train(music_config, text_args):
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
@@ -68,6 +72,7 @@ def _train(music_config, text_args):
     model.train()
     for epoch in range(epochs):
         print("Starting epoch ", epoch)
+        losses = []
         for batch_idx, batch_samples in tqdm(enumerate(train_dloader)):
             if batch_idx > 0.1 * len(train_dloader):
                 break
@@ -99,9 +104,11 @@ def _train(music_config, text_args):
             loss.backward()
             optimizer.step()
             if batch_idx % 1000 == 0:
+                losses.append(loss.item())
                 print("Current batch:", batch_idx, "loss:", loss.item())
             #training accuracy
-
+        
+        save_loss(losses, epoch)
         # save model checkpoint after every epoch
         torch.save({'epoch': epoch,
             'model_state_dict': model.state_dict(),
