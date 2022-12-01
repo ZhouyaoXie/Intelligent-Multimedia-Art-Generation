@@ -427,7 +427,7 @@ def get_dataloader(data_config):
 
     # get dataloader
     train_dloader = DataLoader(
-      train_dset, batch_size=data_config['data']['batch_size'], shuffle=True, num_workers=8
+      train_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
     )
     val_dloader = DataLoader(
       val_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
