@@ -58,7 +58,7 @@ training:
     ckpt_interval:    50
     log_interval:     10
     val_interval:     50
-    mode:   INFERENCE
+    mode:   TRAIN
     output_path:      outputs/
     max_inference_epoch:  100
     max_inference_loss:   0.01

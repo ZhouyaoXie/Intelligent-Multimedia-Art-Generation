@@ -17,6 +17,9 @@ import torch.nn.functional as F
 
 from .utils import cached_path
 
+import tempfile
+import tarfile
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -660,3 +663,25 @@ class BertPreTrainedModel(nn.Module):
                                model.__class__.__name__, "\n\t".join(error_msgs)))
         return model
 
+from config.text_config import text_args
+
+class BertPreTrained(BertPreTrainedModel, torch.nn.Module):
+	"""
+	BERT model for classification.
+	"""
+	def __init__(self, config):
+		"""
+
+		:param config:
+		:param mode:  Number of visual layers
+		"""
+		super().__init__(config)
+		self.bert = nn.ModuleList([BertLayer(text_args) for _ in range(12)])
+		self.apply(self.init_bert_weights)
+
+	def forward(self, lang_feats, lang_attention_mask):
+		# lang_feats = self.bert(lang_feats, lang_attention_mask)
+		for layer_module in self.bert:
+			lang_feats = layer_module(lang_feats, lang_attention_mask)
+
+		return lang_feats

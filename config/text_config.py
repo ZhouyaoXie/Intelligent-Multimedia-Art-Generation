@@ -75,7 +75,7 @@ def parse_args():
 
     # LXRT Model Config
     # Note: LXRT = L, X, R (three encoders), Transformer
-    parser.add_argument("--llayers", default=9, type=int, help='Number of Language layers')
+    parser.add_argument("--llayers", default=12, type=int, help='Number of Language layers')
     parser.add_argument("--xlayers", default=5, type=int, help='Number of CROSS-modality layers.')
     parser.add_argument("--rlayers", default=5, type=int, help='Number of object Relationship layers.')
     parser.add_argument("--hidden_size", default=768, type=int, help='Cross attention hidden size.')
