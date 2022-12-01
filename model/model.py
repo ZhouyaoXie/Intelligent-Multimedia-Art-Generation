@@ -247,7 +247,6 @@ class MusicCLIP(torch.nn.Module):
 
         #Run language layers from pretrianed bert
         lang_feats = self.bert(lang_feats, lang_attention_mask)
-        print("Shape of lang feats is ", lang_feats.shape)
 
 
 
