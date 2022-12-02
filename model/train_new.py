@@ -50,8 +50,11 @@ MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
 # stop decoder training if the contrastive loss is smaller than this value
 MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
 
+if not os.path.exists(model_out_path):
+    os.makedirs(model_out_path)
+    
 def save_loss(losses, epoch):
-    with open(f"{model_out_path}epoch{epoch}_losses", "wb") as f:
+    with open(f"{model_out_path}epoch{epoch}_losses.pkl", "wb") as f:
         pickle.dump(losses, f)
 
 def _train(music_config, text_args):
