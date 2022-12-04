@@ -47,7 +47,7 @@ if __name__ == "__main__":
     data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = test_dataloader(data_config)
     
-    model = MusicCLIP(data_config, text_args)
+    # model = MusicCLIP(data_config, text_args)
     # print(model.state_dict().keys())
 
     train(music_config = data_config, text_config = text_args)

@@ -9,7 +9,7 @@ from .music_transformer import VAETransformerEncoder
 from .music_encoder_utils import (
     TokenEmbedding, PositionalEncoding, weights_init
 )
-from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel
+from .text_encoder import BertLayer , BertEmbeddings, BertPooler, BertPreTrainedModel, BertLayerNorm, BertPreTrained
 from .cross_attn import MusicClIPXLayer
 from .tokenization import BertTokenizer
 import torch.nn.functional as F
@@ -48,9 +48,35 @@ class MusicCLIP(torch.nn.Module):
         #Initialize text encoder
         self.embeddings = BertEmbeddings(text_config)
         self.pooler = BertPooler(text_config)
-        # self.apply(self.init_bert_weights)
         self._init_bert_from_config(text_config)
+        self.apply(self.init_bert_weights)
 
+
+        #Initialize text encoder from pre-trained Weights
+        self.bert = BertPreTrained.from_pretrained(
+            "bert-base-uncased"
+        )
+
+
+        print("Printing the pre-trained Bert weights")
+        from pprint import pprint
+        pprint(vars(self.bert))
+
+
+
+
+    def init_bert_weights(self, module):
+        """ Initialize the weights.
+        """
+        if isinstance(module, (nn.Linear, nn.Embedding)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, BertLayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
 
     def _init_music_encoder_from_config(self, config):
         self.token_emb = TokenEmbedding(config['data']['n_token'], config['model']['d_embed'], config['model']['enc_d_model'])
@@ -216,8 +242,13 @@ class MusicCLIP(torch.nn.Module):
             pad = (0, 0, 0, self.music_seq_len - self.text_seq_len, 0, 0)
         )
         # Run language layers
-        for layer_module in self.layer:
-            lang_feats = layer_module(lang_feats, lang_attention_mask)
+        # for layer_module in self.layer:
+        #     lang_feats = layer_module(lang_feats, lang_attention_mask)
+
+        #Run language layers from pretrianed bert
+        lang_feats = self.bert(lang_feats, lang_attention_mask)
+
+
 
         # print('lang_attention_mask size', lang_attention_mask.size()) # [4, 1, 1, 128]
 

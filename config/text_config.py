@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 import torch
-
+import sys
 # bert config: https://github.com/deepset-ai/bert-tensorflow/blob/master/samples/bert_config.json
 
 
@@ -75,7 +75,7 @@ def parse_args():
 
     # LXRT Model Config
     # Note: LXRT = L, X, R (three encoders), Transformer
-    parser.add_argument("--llayers", default=9, type=int, help='Number of Language layers')
+    parser.add_argument("--llayers", default=12, type=int, help='Number of Language layers')
     parser.add_argument("--xlayers", default=5, type=int, help='Number of CROSS-modality layers.')
     parser.add_argument("--rlayers", default=5, type=int, help='Number of object Relationship layers.')
     parser.add_argument("--hidden_size", default=768, type=int, help='Cross attention hidden size.')
@@ -102,7 +102,7 @@ def parse_args():
     parser.add_argument("--numWorkers", dest='num_workers', default=0)
 
     # Parse the arguments.
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[2:])
 
     # Bind optimizer class.
     args.optimizer = get_optimizer(args.optim)

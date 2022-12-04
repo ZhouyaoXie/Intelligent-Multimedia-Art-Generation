@@ -36,12 +36,13 @@ model:
     pretrained_params_path:      converted_pretrained_weights.pt
     pretrained_optim_path:       null
     use_attr_cls:     False
+    n_token:          404
 
 # x_attention:
 #     num_x_layers:     6
 
 training:
-    device:           cuda:0
+    device:           cpu:0
     ckpt_dir:         ./ckpt/enc_dec_12L-16_bars-seqlen_1280
     trained_steps:    0
     max_epochs:       1000
@@ -57,9 +58,9 @@ training:
     ckpt_interval:    50
     log_interval:     10
     val_interval:     50
-    mode:   TRAIN
+    mode:   INFERENCE
     output_path:      outputs/
-    max_inference_epoch:  100
+    max_inference_epoch:  1
     max_inference_loss:   0.01
 
 generate:

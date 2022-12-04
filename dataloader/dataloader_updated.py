@@ -197,7 +197,8 @@ class REMIFullSongTransformerDataset(Dataset):
       self.pieces = sorted( [os.path.join(self.data_dir, p) for p in self.pieces] )
 
     self.piece_bar_pos = []
-
+    #Loading only the first 200 lines through dataloader
+    self.pieces = self.pieces[:200]
     for i, p in enumerate(self.pieces):
       bar_pos, p_evs = pickle_load(p)
       if not i % 2000:
@@ -364,20 +365,20 @@ def get_dataloader(data_config):
     # files that we do not consider because they have no events between some consecutive bars
     print("Obtaining files to drop...")
     no_events_d = {}
-    with open("no_events_fn.txt", "r") as f:
+    with open("/home/ubuntu/Intelligent-Multimedia-Art-Generation/dataloader/no_events_fn.txt", "r") as f:
       for line in f.readlines():
         fn, num = line.rstrip('\n').split()
         no_events_d[fn] = int(num)
 
     # obtain datasets
-    neg_test = load_tuples(data_config['data']['neg_test_split'])
+    # neg_test = load_tuples(data_config['data']['neg_test_split'])
     neg_train = load_tuples(data_config['data']['neg_train_split'])
-    neg_val = load_tuples(data_config['data']['neg_val_split'])
-    pos_test = load_tuples(data_config['data']['pos_test_split'])
+    # neg_val = load_tuples(data_config['data']['neg_val_split'])
+    # pos_test = load_tuples(data_config['data']['pos_test_split'])
     pos_train = load_tuples(data_config['data']['pos_train_split'])
-    pos_val = load_tuples(data_config['data']['pos_val_split'])
+    # pos_val = load_tuples(data_config['data']['pos_val_split'])
     print("Print some examples from neg_test set:")
-    print_dict_ex(neg_test)
+    # print_dict_ex(neg_test)
 
     # generate datasets
     print("Generating train set...")
@@ -429,14 +430,16 @@ def get_dataloader(data_config):
     train_dloader = DataLoader(
       train_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
     )
-    val_dloader = DataLoader(
-      val_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
-    )
-    test_dloader = DataLoader(
-      test_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
-    )
+    # val_dloader = DataLoader(
+    #   val_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
+    # )
+    # test_dloader = DataLoader(
+    #   test_dset, batch_size=data_config['data']['batch_size'], shuffle=False, num_workers=8
+    # )
 
-    return train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader
+    # return train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader
+    return train_dset, None, None, train_dloader, None, None
+
 
 
 if __name__ == "__main__":
