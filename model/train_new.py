@@ -60,7 +60,7 @@ def save_loss(losses, epoch):
 def _train(music_config, text_args):
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     if 'n_token' not in music_config['data'] or music_config['data']['n_token'] is None:
-        music_config['data']['n_token'] = train_dset.vocab_size   # 333 in musemorphose; 404 in our data
+        music_config['data']['n_token'] = train_dset.vocab_size  # 333 in musemorphose; 405 in our data excluding Pad_None
 
     model = MusicCLIP(music_config, text_args)
     print(model.state_dict().keys())

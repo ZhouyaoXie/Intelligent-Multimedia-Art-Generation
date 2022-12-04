@@ -209,23 +209,23 @@ class MusicCLIPInfer(torch.nn.Module):
         return eps * std + mu
         # return torch.tensor(np.ones([128,16,1]))
 
-    def get_sampled_latent(self, inp, padding_mask=None, use_sampling=False, sampling_var=0.):
-        token_emb = self.model.token_emb(inp)
-        enc_inp = self.model.emb_dropout(token_emb) + self.model.pe(inp.size(0))
+    def get_sampled_latent(self, inp=None, padding_mask=None, use_sampling=False, sampling_var=0.):
+        bs, d_embed, seq_len = 1, config['model']['d_embed'], config['data']['enc_seqlen']
+        inp = self.sample_dec_inp().long().to(device)
+        token_emb = self.model.token_emb(inp).reshape((seq_len, -1, d_embed))
+        enc_inp = self.model.emb_dropout(token_emb) + self.model.pe(seq_len)
+        # print("enc_inp shape: ", enc_inp.shape)   # (seq_len, bs * 2, emb_dim)
 
-        _, mu, logvar = self.model.encoder(enc_inp, padding_mask=padding_mask)
+        _, _, mu, logvar = self.model.encoder(enc_inp, padding_mask=padding_mask)
         mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
         vae_latent = self.reparameterize(mu, logvar, use_sampling=use_sampling, sampling_var=sampling_var)
 
         return vae_latent
 
-    def get_sampled_latent_inference(self, sampling_var=0.):
-        mu = 0
-        logvar =1 
-        # mu, logvar = mu.reshape(-1, mu.size(-1)), logvar.reshape(-1, mu.size(-1))
-        vae_latent = self.reparameterize(mu, logvar, sampling_var=sampling_var)
-
-        return vae_latent
+    def sample_dec_inp(self):
+        bs, n_bars, seq_len = 1, config['data']['max_bars'], config['data']['enc_seqlen']
+        dec_inp = torch.zeros((bs, n_bars, seq_len)).to(device)
+        return dec_inp
 
     def generate_on_latent_ctrl_vanilla_truncate(self, 
         latents, event2idx, idx2event, 
@@ -244,8 +244,9 @@ class MusicCLIPInfer(torch.nn.Module):
         else:
             generated = [event2idx[e] for e in primer]
             latent_placeholder[:len(generated), 0, :] = latents[0].squeeze(0)
-            rfreq_placeholder[:len(generated), 0] = rfreq_cls[0]
-            polyph_placeholder[:len(generated), 0] = polyph_cls[0]
+            if rfreq_cls and polyph_cls:
+                rfreq_placeholder[:len(generated), 0] = rfreq_cls[0]
+                polyph_placeholder[:len(generated), 0] = polyph_cls[0]
             
         target_bars, generated_bars = latents.size(0), 0
 
@@ -265,8 +266,9 @@ class MusicCLIPInfer(torch.nn.Module):
                 dec_input = numpy_to_tensor([generated], device=device).permute(1, 0).long()
 
             latent_placeholder[len(generated)-1, 0, :] = latents[ generated_bars ]
-            rfreq_placeholder[len(generated)-1, 0] = rfreq_cls[ generated_bars ]
-            polyph_placeholder[len(generated)-1, 0] = polyph_cls[ generated_bars ]
+            if rfreq_cls and polyph_cls:
+                rfreq_placeholder[len(generated)-1, 0] = rfreq_cls[ generated_bars ]
+                polyph_placeholder[len(generated)-1, 0] = polyph_cls[ generated_bars ]
 
             dec_seg_emb = latent_placeholder[:len(generated), :]
             dec_rfreq_cls = rfreq_placeholder[:len(generated), :]
@@ -274,24 +276,31 @@ class MusicCLIPInfer(torch.nn.Module):
 
             # sampling
             with torch.no_grad():
-                logits = self.generate(dec_input, dec_seg_emb, dec_rfreq_cls, dec_polyph_cls)
+                if rfreq_cls is None or polyph_cls is None:
+                    logits = self.generate(dec_input, dec_seg_emb, None, None)
+                else:
+                    logits = self.generate(dec_input, dec_seg_emb, dec_rfreq_cls, dec_polyph_cls)
                 logits = tensor_to_numpy(logits[0])
                 probs = temperatured_softmax(logits, temperature)
                 word = nucleus(probs, nucleus_p)
-                word_event = idx2event[word]
+
+            # pad None token is not in vocab 
+            if word not in idx2event: continue 
+
+            word_event = idx2event[word]
 
             if 'Beat' in word_event:
                 event_pos = get_beat_idx(word_event)
-            if not event_pos >= cur_pos:
-                failed_cnt += 1
-                print ('[info] position not increasing, failed cnt:', failed_cnt)
-                if failed_cnt >= 128:
-                    print ('[FATAL] model stuck, exiting ...')
-                    return generated
-                continue
-            else:
-                cur_pos = event_pos
-                failed_cnt = 0
+                if not event_pos >= cur_pos:
+                    failed_cnt += 1
+                    print ('[info] position not increasing, failed cnt:', failed_cnt, '; cur_pos:', cur_pos)
+                    if failed_cnt >= 128:
+                        print ('[FATAL] model stuck, exiting ...')
+                        return generated
+                    continue
+                else:
+                    cur_pos = event_pos
+                    failed_cnt = 0
 
             if 'Bar' in word_event:
                 generated_bars += 1
@@ -363,7 +372,7 @@ class MusicCLIPInfer(torch.nn.Module):
                 print ('[info] file exists, skipping ...')
                 continue
 
-            p_latents = self.get_sampled_latent_inference()
+            p_latents = self.get_sampled_latent()
             song, t_sec, entropies = self.generate_on_latent_ctrl_vanilla_truncate(
                                         p_latents, event2idx, idx2event,
                                         rfreq_cls = None, polyph_cls = None, 

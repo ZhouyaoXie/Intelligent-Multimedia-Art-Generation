@@ -5,10 +5,13 @@ import torch
 
 # import module from the same directory
 from model.model import MusicCLIP
+from model.inference import MusicCLIPInfer
 from dataloader.dataloader_updated import get_dataloader
 
 from model.train_new import train
 from config.text_config import text_args
+
+from model.utils import pickle_load
 
 print("loading config...")
 config_path = "config/default.yaml"
@@ -44,10 +47,23 @@ if __name__ == "__main__":
 
     # test dataloader
     # print("testing dataloader...")
-    data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-    train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = test_dataloader(data_config)
+    music_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
+    # train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     
-    # model = MusicCLIP(data_config, text_args)
+    # model = MusicCLIP(music_config, text_args)
     # print(model.state_dict().keys())
 
-    train(music_config = data_config, text_config = text_args)
+    # train(music_config = music_config, text_config = text_args)
+
+    # vocab_path = music_config['data']['vocab_path']
+    # idx2event = pickle_load(vocab_path)[1]
+    # print(idx2event)
+
+    model = MusicCLIP(music_config, text_args)
+    infer_model = MusicCLIPInfer(model, music_config, text_args)
+    infer_model.generate_music(
+        1,
+        None,
+        None,
+        keep_last_only = True
+    )
