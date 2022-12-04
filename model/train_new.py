@@ -3,6 +3,7 @@ import random
 import numpy as np
 import yaml 
 import os, sys
+import pickle
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
@@ -17,6 +18,8 @@ from .inference import MusicCLIPInfer
 from config.text_config import text_args
 from model.inference import MusicCLIPInfer
 from .contrastive_loss import ContrastiveLoss
+
+from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,6 +50,12 @@ MAX_INFERENCE_EPOCH = music_config['training']['max_inference_epoch']
 # stop decoder training if the contrastive loss is smaller than this value
 MAX_INFERENCE_LOSS = music_config['training']['max_inference_loss']
 
+if not os.path.exists(model_out_path):
+    os.makedirs(model_out_path)
+    
+def save_loss(losses, epoch):
+    with open(f"{model_out_path}epoch{epoch}_losses.pkl", "wb") as f:
+        pickle.dump(losses, f)
 
 def _train(music_config, text_args):
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
@@ -66,7 +75,10 @@ def _train(music_config, text_args):
     model.train()
     for epoch in range(epochs):
         print("Starting epoch ", epoch)
-        for batch_idx, batch_samples in enumerate(train_dloader):
+        losses = []
+        for batch_idx, batch_samples in tqdm(enumerate(train_dloader)):
+            if batch_idx > 0.1 * len(train_dloader):
+                break
             model.zero_grad()
             batch_enc_inp = batch_samples['enc_input'].permute(2, 0, 1).to(device)
             batch_dec_inp = batch_samples['dec_input'].permute(1, 0).to(device)
@@ -89,14 +101,17 @@ def _train(music_config, text_args):
                 padding_mask=batch_padding_mask,
                 music_attention_mask = None,
             )
-            # print('y', y)
-            loss = c_loss(music_feats, lang_feats, y)
+            music_pooled = model.music_pool(music_feats)
+            loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            print("loss", loss.item())
+            if batch_idx % 1000 == 0:
+                losses.append(loss.item())
+                print("Current batch:", batch_idx, "loss:", loss.item())
             #training accuracy
-
+        
+        save_loss(losses, epoch)
         # save model checkpoint after every epoch
         torch.save({'epoch': epoch,
             'model_state_dict': model.state_dict(),

@@ -222,12 +222,12 @@ class MusicCLIP(torch.nn.Module):
         music_feats = self.out_proj(music_feats)
         
         try:
-            assert music_feats.size()[0] == 4
+            # assert music_feats.size()[0] == 4
             assert music_feats.size()[1] == 128
             assert music_feats.size()[2] == 768
         except Exception:
             print('WARNING music_feats dimension mismatch, expect {s}, get {t}'.format(
-                s = (4, 128, 768),
+                s = (music_feats.size()[0], 128, 768),
                 t = music_feats.size(),
                 )
             )
@@ -261,12 +261,12 @@ class MusicCLIP(torch.nn.Module):
         # print('music & text seq_len', music_seq_len, text_seq_len)
         
         try:
-            assert lang_feats.size()[0] == 4
+            # assert lang_feats.size()[0] == 4
             assert lang_feats.size()[1] == 128
             assert lang_feats.size()[2] == 768
         except Exception as e:
             print('WARNING music_feats dimension mismatch, expect {s}, get {t}'.format(
-                s = (4, 128, 768),
+                s = (music_feats.size()[0], 128, 768),
                 t = music_feats.size(),
                 )
             )
@@ -280,6 +280,11 @@ class MusicCLIP(torch.nn.Module):
         pooled_output = self.pooler(lang_feats)
 
         return lang_feats, music_feats , pooled_output, lang_attention_mask
+
+    def music_pool(self, music_feats):
+        first_token_tensor = music_feats[:, 0]
+        pooled_output = F.softmax(first_token_tensor) # [bs, emb_dim]
+        return pooled_output
 
 
 class InputFeatures(object):

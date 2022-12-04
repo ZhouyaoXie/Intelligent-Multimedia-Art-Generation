@@ -389,42 +389,42 @@ def get_dataloader(data_config):
       model_max_bars=data_config['data']['max_bars'], 
       model_dec_seqlen=data_config['data']['enc_seqlen'], 
       model_enc_seqlen=data_config['data']['enc_seqlen'], 
-      min_pitch=22, 
-      max_pitch=107,
+      min_pitch=0, 
+      max_pitch=127,
       pos_map=pos_train, 
       neg_map=neg_train,
     )
     print ('train set length:', len(train_dset))
 
     print("Generating val set...")
-    # val_dset = REMIFullSongTransformerDataset(
-    #   data_config['data']['data_dir'], data_config['data']['vocab_path'],
-    #   do_augment=True, 
-    #   use_attr_cls=True,
-    #   model_max_bars=data_config['data']['max_bars'], 
-    #   model_dec_seqlen=data_config['data']['enc_seqlen'], 
-    #   model_enc_seqlen=data_config['data']['enc_seqlen'], 
-    #   min_pitch=22, 
-    #   max_pitch=107,
-    #   pos_map=pos_val, 
-    #   neg_map=neg_val,
-    # )
-    # print ('val set length:', len(val_dset))
+    val_dset = REMIFullSongTransformerDataset(
+      data_config['data']['data_dir'], data_config['data']['vocab_path'],
+      do_augment=True, 
+      use_attr_cls=True,
+      model_max_bars=data_config['data']['max_bars'], 
+      model_dec_seqlen=data_config['data']['enc_seqlen'], 
+      model_enc_seqlen=data_config['data']['enc_seqlen'], 
+      min_pitch=0, 
+      max_pitch=127,
+      pos_map=pos_val, 
+      neg_map=neg_val,
+    )
+    print ('val set length:', len(val_dset))
 
     print("Generating test set...")
-    # test_dset = REMIFullSongTransformerDataset(
-    #   data_config['data']['data_dir'], data_config['data']['vocab_path'],
-    #   do_augment=True, 
-    #   use_attr_cls=True,
-    #   model_max_bars=data_config['data']['max_bars'], 
-    #   model_dec_seqlen=data_config['data']['enc_seqlen'], 
-    #   model_enc_seqlen=data_config['data']['enc_seqlen'], 
-    #   min_pitch=22, 
-    #   max_pitch=107,
-    #   pos_map=pos_test, 
-    #   neg_map=neg_test,
-    # )
-    # print ('test set length:', len(test_dset))
+    test_dset = REMIFullSongTransformerDataset(
+      data_config['data']['data_dir'], data_config['data']['vocab_path'],
+      do_augment=True, 
+      use_attr_cls=True,
+      model_max_bars=data_config['data']['max_bars'], 
+      model_dec_seqlen=data_config['data']['enc_seqlen'], 
+      model_enc_seqlen=data_config['data']['enc_seqlen'], 
+      min_pitch=0, 
+      max_pitch=127,
+      pos_map=pos_test, 
+      neg_map=neg_test,
+    )
+    print ('test set length:', len(test_dset))
 
     # get dataloader
     train_dloader = DataLoader(

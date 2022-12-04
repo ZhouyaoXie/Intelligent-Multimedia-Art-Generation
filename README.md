@@ -45,3 +45,10 @@ root
 pip install gdown
 
 gdown --folder https://drive.google.com/drive/folders/13UbMp_Q0PvnPsVNs7Aw4RWeiwT5cRatl?usp=sharing
+
+
+## To start training process:
+
+bash setup.sh
+
+python3 model_train.py
