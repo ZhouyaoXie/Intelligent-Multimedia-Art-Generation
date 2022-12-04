@@ -197,8 +197,6 @@ class REMIFullSongTransformerDataset(Dataset):
       self.pieces = sorted( [os.path.join(self.data_dir, p) for p in self.pieces] )
 
     self.piece_bar_pos = []
-    #Loading only the first 200 lines through dataloader
-    self.pieces = self.pieces[:200]
     for i, p in enumerate(self.pieces):
       bar_pos, p_evs = pickle_load(p)
       if not i % 2000:
