@@ -35,20 +35,20 @@ if __name__ == "__main__":
     # train
     print("training . . .")
     data_config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
-    args = parse_args()
+#     args = parse_args()
 
-    data_config["data"]["batch_size"] = args.batch_size
-    data_config["training"]["output_path"] = args.output_path
-    data_config["training"]["max_epochs"] = args.max_epochs
-    data_config["training"]["max_lr"] = args.max_lr
-    data_config["training"]["min_lr"] = args.min_lr
-    data_config["training"]["mode"] = args.mode
+#     data_config["data"]["batch_size"] = args.batch_size
+#     data_config["training"]["output_path"] = args.output_path
+#     data_config["training"]["max_epochs"] = args.max_epochs
+#     data_config["training"]["max_lr"] = args.max_lr
+#     data_config["training"]["min_lr"] = args.min_lr
+#     data_config["training"]["mode"] = args.mode
 
-    print("mode: ", data_config["training"]["mode"])
-    print("output_path: ", data_config["training"]["output_path"])
-    print("max_epochs: ", data_config["training"]["max_epochs"])
-    print("bastch_size: ", data_config["data"]["batch_size"])
-    print("max_lr: ", data_config["training"]["max_lr"])
-    print("min_lr: ", data_config["training"]["min_lr"])
+#     print("mode: ", data_config["training"]["mode"])
+#     print("output_path: ", data_config["training"]["output_path"])
+#     print("max_epochs: ", data_config["training"]["max_epochs"])
+#     print("bastch_size: ", data_config["data"]["batch_size"])
+#     print("max_lr: ", data_config["training"]["max_lr"])
+#     print("min_lr: ", data_config["training"]["min_lr"])
     
     train(music_config = data_config, text_config = text_args)
