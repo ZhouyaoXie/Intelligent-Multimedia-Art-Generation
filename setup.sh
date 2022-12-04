@@ -15,6 +15,9 @@ mv converted_pretrained_weights_updated.pt converted_pretrained_weights.pt  # re
 echo "setup dataloader"
 sh dataloader/setup.sh
 
+# move file to dataloader folder
+mv no_events_fn.txt dataloader/
+
 # echo "compute attribute classes"
 # python3 musemorphose/attributes.py
 
