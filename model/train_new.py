@@ -133,14 +133,13 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     print('music config', music_config['data']['pos_train_split'])
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     # train_dset = torch.tensor(train_dset)
-    dec_inp = torch.tensor(train_dset[2]['dec_input']).reshape(-1,1).permute(1,0).to(device)
-    dec_inp_bar_pos = torch.tensor(train_dset[2]['bar_pos']).reshape(-1,1).to(device)
+    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).permute(1,0).to(device)
+    dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
     # dec_inp = np.array([1])
     # dec_inp_bar_pos = np.array([1])
-
 
     # load saved MusicCLIP model
     # model = None
@@ -160,7 +159,6 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # initialize training optimizer and loss
     optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 5e-4)
     c_loss = ContrastiveLoss(bs)
-    # c_loss = torch.nn.CrossEntropyLoss()
 
     start_time  = time.time()
     infer_model.train()
