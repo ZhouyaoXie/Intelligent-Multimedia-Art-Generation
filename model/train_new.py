@@ -141,7 +141,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # load saved MusicCLIP model
     model = MusicCLIP(music_config, text_args)
     model_save_path = 'model_epoch1000_bs8_lr0.0001_ckpt_epoch14.pth'
-    model.load_state_dict(torch.load(model_save_path))
+    model.load_state_dict(torch.load(model_save_path)["model_state_dict"])
     model.eval()
     model.to(device)
 
