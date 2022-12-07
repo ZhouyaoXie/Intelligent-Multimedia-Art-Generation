@@ -141,7 +141,7 @@ class MusicCLIPInfer(torch.nn.Module):
             dec_seg_emb_cat = dec_seg_emb
 
         print("\n\n Before passing the values to the decoder \n\n")
-        print("the sahpe of dec_inp is ", dec_inp.shape)
+        print("the shape of dec_inp is ", dec_inp.shape)
         print("the shape of dec_seg_emb_cat", dec_seg_emb_cat.shape)
         dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
         dec_logits = self.dec_out_proj(dec_out)
@@ -195,7 +195,7 @@ class MusicCLIPInfer(torch.nn.Module):
                                                   music_feats, music_attention_mask)
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         pooled_output = self.model.pooler(lang_feats)
-        pooled_output =  self.pooled_proj(pooled_output)
+        # pooled_output =  self.pooled_proj(pooled_output)
         
         
         return lang_feats, music_feats , pooled_output
