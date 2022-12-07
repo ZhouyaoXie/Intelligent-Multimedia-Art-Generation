@@ -33,7 +33,7 @@ model:
     d_rfreq_emb:      64
     cond_mode:        in-attn
     # pretrained_params_path:      musemorphose_pretrained_weights.pt
-    pretrained_params_path:      converted_pretrained_weights_updated.pt
+    pretrained_params_path:      converted_pretrained_weights.pt
     pretrained_optim_path:       null
     use_attr_cls:     False
     n_token:          406

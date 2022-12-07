@@ -150,11 +150,13 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     #     )
     # model.load_state_dict(torch.load(model_save_path))
     # model.eval()
+    model.to(device)
 
     print("\n\n\nStarting the inference pipeline\n\n\n")
 
     # initiate MusicCLIPInfer model
     infer_model = MusicCLIPInfer(model, music_config, text_args)
+    infer_model.to(device)
 
     # initialize training optimizer and loss
     optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 5e-4)
@@ -163,7 +165,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     start_time  = time.time()
     infer_model.train()
     rfreq_cls = None
-    polyph_cls =None
+    polyph_cls = None
     for epoch in range(MAX_INFERENCE_EPOCH):
         print("Starting epoch ", epoch)
         lang_feats, music_feats, pooled_output = infer_model(
