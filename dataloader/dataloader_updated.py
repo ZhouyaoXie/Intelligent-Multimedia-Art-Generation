@@ -44,9 +44,13 @@ def print_dict_ex(d):
 def load_tuples(fn):
   fn_map = {}
   recording_track_map = {}
+  print('fn in load_tuples:', fn)
   with open(fn) as csv_file:
     csv_reader = csv.reader(csv_file)
     count = 0
+    # total_count = sum(1 for row in csv_reader) # 582664 for train set
+    # print("total_count:", total_count)
+
     for row in csv_reader:
       assert len(row) == 2
       if len(row[1])==0:
@@ -63,6 +67,7 @@ def load_tuples(fn):
           fn_map[map_id] = [row[1]]
       count += 1
     print(f"Processed {count - 1} lines of tuples.")
+  # print('len of fn_map is ', len(fn_map)) # 25074
   return fn_map
 
 # utility funcs from Musemorphose.dataloader
@@ -196,9 +201,12 @@ class REMIFullSongTransformerDataset(Dataset):
     else:
       self.pieces = sorted( [os.path.join(self.data_dir, p) for p in self.pieces] )
 
+    # print('self.pieces in build_dataset:', self.pieces)
+
     self.piece_bar_pos = []
     for i, p in enumerate(self.pieces):
       bar_pos, p_evs = pickle_load(p)
+      # print('p:', p, '; len of bar_pos:', len(bar_pos))
       if not i % 2000:
         print ('[preparing data] now at #{}'.format(i))
       if bar_pos[-1] == len(p_evs):
@@ -211,6 +219,8 @@ class REMIFullSongTransformerDataset(Dataset):
       bar_pos.append(len(p_evs))
 
       self.piece_bar_pos.append(bar_pos)
+
+    print('len of piece_bar_pos', len(self.piece_bar_pos))
 
   def get_sample_from_file(self, piece_idx):
     piece_evs = pickle_load(self.pieces[piece_idx])[1]
@@ -363,7 +373,7 @@ def get_dataloader(data_config):
     # files that we do not consider because they have no events between some consecutive bars
     print("Obtaining files to drop...")
     no_events_d = {}
-    with open("no_events_fn.txt", "r") as f:
+    with open("dataloader/no_events_fn.txt", "r") as f:
       for line in f.readlines():
         fn, num = line.rstrip('\n').split()
         no_events_d[fn] = int(num)
@@ -377,6 +387,8 @@ def get_dataloader(data_config):
     # pos_val = load_tuples(data_config['data']['pos_val_split'])
     print("Print some examples from neg_test set:")
     # print_dict_ex(neg_test)
+
+    print('len of neg_train, pos_train is', len(neg_train), len(pos_train)) # 25074
 
     # generate datasets
     print("Generating train set...")
