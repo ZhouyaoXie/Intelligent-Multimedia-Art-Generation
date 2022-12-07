@@ -172,33 +172,33 @@ class MusicCLIPInfer(torch.nn.Module):
         music_feats, dec_logits, mu, logvar = self.decode_music(
             dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
         )
+        print("music_feats shape:", music_feats.shape)
         # encode text input
         lang_feats, lang_attention_mask = self.model.encode_text(
             text, token_type_ids
         )
 
-
         lang_feats = F.pad(
             input=lang_feats, 
             pad = (0, 0, 0, self.model.music_seq_len - self.model.text_seq_len, 0, 0)
         )
+        
         #Run language layers from pretrianed bert
         lang_feats = self.model.bert(lang_feats, lang_attention_mask)
-
-
+        print("lang_feats shape:", lang_feats.shape)
 
         #extend the music emb output to text emb output
         music_feats = self.model.out_proj(music_feats)
+        print("music_feats shape:", music_feats.shape)
+
         # Run cross-modality layers
         for layer_module in self.model.x_layers:
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
-        #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
         
-        print("shape of lang_feats:", lang_feats.shape)
+        print("shape of lang_feats, music_feats:", lang_feats.shape, music_feats.shape)
         pooled_output = self.model.pooler(lang_feats)
         # pooled_output =  self.pooled_proj(pooled_output)
-        
         
         return lang_feats, music_feats , pooled_output
  
