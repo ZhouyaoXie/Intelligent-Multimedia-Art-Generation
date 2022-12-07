@@ -130,12 +130,13 @@ def _train(music_config, text_args):
 
 def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # get input params for inference
-    train_dset, _, _, train_dloader, _, _ = get_dataloader(music_config)
+    print('music config', music_config['data']['pos_train_split'])
+    train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     # train_dset = torch.tensor(train_dset)
-    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).permute(1,0).to(device)
-    dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
-    rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
-    polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
+    dec_inp = torch.tensor(train_dset[2]['dec_input']).reshape(-1,1).permute(1,0).to(device)
+    dec_inp_bar_pos = torch.tensor(train_dset[2]['bar_pos']).reshape(-1,1).to(device)
+    # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
+    # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
     # dec_inp = np.array([1])
     # dec_inp_bar_pos = np.array([1])
@@ -159,7 +160,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # initialize training optimizer and loss
     optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 5e-4)
     c_loss = ContrastiveLoss(bs)
-    c_loss = torch.nn.CrossEntropyLoss()
+    # c_loss = torch.nn.CrossEntropyLoss()
 
     start_time  = time.time()
     infer_model.train()
@@ -176,8 +177,11 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
         )
         print("shaped of the pooled output shape  is ", pooled_output.shape)
         y = torch.tensor(np.ones(pooled_output.shape[0]))
-        # y = y.type(torch.LongTensor)
-        loss = c_loss(pooled_output.reshape(-1), y)
+
+        music_pooled = model.music_pool(music_feats)
+        loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
+            
+        # loss = c_loss(pooled_output.reshape(-1), y)
         # loss = c_loss(lang_feats, music_feats, POSITIVE)
 
         print("loss", loss.item())
@@ -195,8 +199,8 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # generate music using the updated decoder
     infer_model.generate_music(
         n_pieces,
-        rfreq_cls,
-        polyph_cls,
+        None,
+        None,
         keep_last_only = True
     )
     generate_end_time = time.time()
