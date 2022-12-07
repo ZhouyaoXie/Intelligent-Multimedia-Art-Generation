@@ -137,19 +137,12 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
-    
-    # dec_inp = np.array([1])
-    # dec_inp_bar_pos = np.array([1])
 
     # load saved MusicCLIP model
-    # model = None
     model = MusicCLIP(music_config, text_args)
-    # if model_save_path is None:
-    #     model_save_path = model_out_path + "epoch{epoch}_bs{bs}_lr{lr}.pt".format(
-    #         epoch = epochs, bs = bs, lr = lr,
-    #     )
-    # model.load_state_dict(torch.load(model_save_path))
-    # model.eval()
+    model_save_path = 'model_epoch1000_bs8_lr0.0001_ckpt_epoch14.pth'
+    model.load_state_dict(torch.load(model_save_path))
+    model.eval()
     model.to(device)
 
     print("\n\n\nStarting the inference pipeline\n\n\n")
@@ -183,7 +176,6 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
         loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
             
         # loss = c_loss(pooled_output.reshape(-1), y)
-        # loss = c_loss(lang_feats, music_feats, POSITIVE)
 
         print("loss", loss.item())
         if loss < MAX_INFERENCE_LOSS:
