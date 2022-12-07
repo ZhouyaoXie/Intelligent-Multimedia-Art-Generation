@@ -194,6 +194,8 @@ class MusicCLIPInfer(torch.nn.Module):
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
         #pooled output to run the contrasitve loss from the hidden token of the first token in final layer
+        
+        print("shape of lang_feats:", lang_feats.shape)
         pooled_output = self.model.pooler(lang_feats)
         # pooled_output =  self.pooled_proj(pooled_output)
         

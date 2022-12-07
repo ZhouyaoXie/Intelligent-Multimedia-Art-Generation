@@ -179,6 +179,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
         y = torch.tensor(np.ones(pooled_output.shape[0]))
 
         music_pooled = model.music_pool(music_feats)
+        print("shape of music_pooled:", music_pooled.shape)
         loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
             
         # loss = c_loss(pooled_output.reshape(-1), y)
