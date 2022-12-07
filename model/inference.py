@@ -26,7 +26,7 @@ import torch.nn.functional as F
 config_path = "config/default.yaml"
 config = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
-device = config['training']['device']
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 vocab_path = config['data']['vocab_path']
 use_attr_cls = config['model']['use_attr_cls']
 
@@ -109,9 +109,12 @@ class MusicCLIPInfer(torch.nn.Module):
         token_emb = self.model.token_emb(dec_inp)
         dec_inp = self.model.emb_dropout(token_emb) + self.model.pe(dec_inp.size(0))
 
-
-        mu = torch.tensor(0)
-        logvar = torch.tensor(1)
+        mu = torch.normal(
+            torch.zeros((enc_bt_size, enc_n_bars)),
+            torch.ones((enc_bt_size, enc_n_bars)) / 10,
+        ).to(device)
+        logvar = torch.ones((enc_bt_size, enc_n_bars)) / 100
+        logvar = logvar.to(device)
         vae_latent = self.reparameterize(mu, logvar)
         # enc_bt_size & enc_n_bars come from: enc_inp.size(1), enc_inp.size(2)
         # enc_inp is 'enc_input' in dataset
