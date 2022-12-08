@@ -204,7 +204,8 @@ class MusicCLIPInfer(torch.nn.Module):
             text, 
             dec_inp, 
             dec_inp,   # this input is not used in MusicCLIP.forward(), just a placeholder
-            dec_inp_bar_pos, 
+            dec_inp_bar_pos,  # not used 
+            0, # not used 
             rfreq_cls = rfreq_cls, 
             polyph_cls = polyph_cls,
             music_attention_mask = music_attention_mask,
