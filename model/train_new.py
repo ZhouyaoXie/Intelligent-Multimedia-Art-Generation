@@ -179,8 +179,8 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
 
         loss = c_loss(music_pooled, pooled_output, y, inference = True)  # music_pooled & pooled_output should have shape (bs, emd_dim)
 
-        print("loss", loss)  
-        if loss < MAX_INFERENCE_LOSS:
+        print("loss", loss.item())  
+        if loss.item() < MAX_INFERENCE_LOSS:
             break 
         optimizer.zero_grad()
         loss.backward()
