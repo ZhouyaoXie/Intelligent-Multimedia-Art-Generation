@@ -111,7 +111,8 @@ def remi2midi(events, output_midi_path=None, is_full_event=False, return_first_t
       )
   else:
     if enforce_tempo_val is None:
-      enforce_tempo_val = temp_tempos[1]
+      print("enforce_tempo_val is None, setting to [temp_tempos[1]]")
+      enforce_tempo_val = [temp_tempos[1]]
     for t in enforce_tempo_val:
       midi_obj.tempo_changes.append(
         miditoolkit.TempoChange(t.tempo, int(t.start_tick))

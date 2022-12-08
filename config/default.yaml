@@ -61,7 +61,7 @@ training:
     mode:   INFERENCE
     output_path:      outputs/
     max_inference_epoch:  1
-    max_inference_loss:   0.01
+    max_inference_loss:   0.001
 
 generate:
     out_dir:                    outputs/
