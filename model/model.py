@@ -58,11 +58,9 @@ class MusicCLIP(torch.nn.Module):
         )
 
 
-        print("Printing the pre-trained Bert weights")
-        from pprint import pprint
-        pprint(vars(self.bert))
-
-
+        # print("Printing the pre-trained Bert weights")
+        # from pprint import pprint
+        # pprint(vars(self.bert))
 
 
     def init_bert_weights(self, module):
@@ -213,9 +211,6 @@ class MusicCLIP(torch.nn.Module):
         music_feats = self.encode_music(
             enc_inp, 
             dec_inp, 
-            # dec_inp_bar_pos, 
-            # rfreq_cls, 
-            # polyph_cls,
             padding_mask
         )
         # project music feats from 512 to 768

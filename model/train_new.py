@@ -132,12 +132,13 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # get input params for inference
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     # train_dset = torch.tensor(train_dset)
-    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).permute(1,0).to(device)
+    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).to(device)
     dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
-    print("shaped of dec_inp ", dec_inp.shape)
+    print("shaped of dec_inp ", dec_inp.shape)  # need [128, 1, 512]
+    print("dec_inp:", dec_inp)
 
     # load saved MusicCLIP model
     model = MusicCLIP(music_config, text_args)
@@ -146,7 +147,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     model.eval()
     model.to(device)
 
-    print("\n\n\nStarting the inference pipeline\n\n\n")
+    print("\n\nStarting the inference pipeline\n")
 
     # initiate MusicCLIPInfer model
     infer_model = MusicCLIPInfer(model, music_config, text_args)
