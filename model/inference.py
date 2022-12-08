@@ -192,9 +192,8 @@ class MusicCLIPInfer(torch.nn.Module):
         
         print("shape of lang_feats, music_feats:", lang_feats.shape, music_feats.shape)
         pooled_output = self.model.pooler(lang_feats)
-        # pooled_output =  self.pooled_proj(pooled_output)
 
-        
+        # pooled_output =  self.pooled_proj(pooled_output)
 
         # lang_feats, music_feats , pooled_output, _ = self.model(
         #     text, 
