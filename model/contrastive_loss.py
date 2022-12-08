@@ -89,7 +89,7 @@ class ContrastiveLoss(nn.Module):
 
         else:
             logits = positive_logit.float()
-            labels = torch.ones(logits.shape, dtype = torch.long, device = x1.device)
+            labels = torch.ones(logits.shape, dtype = torch.long, device = x1.device).float()
 
             return F.binary_cross_entropy(logits / self.temperature, labels, reduction=self.reduction)
 
