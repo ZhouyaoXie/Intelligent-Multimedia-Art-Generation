@@ -69,12 +69,12 @@ class ContrastiveLoss(nn.Module):
         positive_logit = torch.sum(x1 * y1, dim=1, keepdim=True)
         # print('positive logits shape: ', positive_logit.shape)  # should be (bs, 1)
 
-        # print('x1 shape, y2 shape: ', x1.shape, y2.shape)
-        x1 = x1.unsqueeze(1)
-        # print('x1 shape: ', x1.shape)  # should be (bs, 1, emb_dim) @ (bs, emb_dim, num_neg_examples)
-        # print('y2 trans shape: ', y2.shape)
-
         if y2:
+            # print('x1 shape, y2 shape: ', x1.shape, y2.shape)
+            x1 = x1.unsqueeze(1)
+            # print('x1 shape: ', x1.shape)  # should be (bs, 1, emb_dim) @ (bs, emb_dim, num_neg_examples)
+            # print('y2 trans shape: ', y2.shape)
+
             negative_logits = x1 @ self.transpose(y2)
             # print('negative logits shape: ', negative_logits.shape) # should be (bs, 1, num_neg_examples)
 
