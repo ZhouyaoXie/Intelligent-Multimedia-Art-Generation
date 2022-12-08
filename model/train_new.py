@@ -138,7 +138,6 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
-    print("text sample:", train_dset[0]['text'])
     print("shaped of dec_inp ", dec_inp.shape)
 
     # load saved MusicCLIP model
