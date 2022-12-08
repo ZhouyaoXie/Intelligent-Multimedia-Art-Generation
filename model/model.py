@@ -162,7 +162,7 @@ class MusicCLIP(torch.nn.Module):
             sents, self.max_seq_length, self.tokenizer
         )
 
-        print("train_features shape:", train_features.shape)
+        print("train_features shape:", len(train_features))
 
         input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long).to(device)
         input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).to(device)
