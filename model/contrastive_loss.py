@@ -91,7 +91,7 @@ class ContrastiveLoss(nn.Module):
             logits = positive_logit 
             labels = torch.ones(len(logits), dtype = torch.long, device = x1.device)
 
-            return F.BCELoss(logits / self.temperature, labels, reduction=self.reduction)
+            return nn.BCELoss(logits / self.temperature, labels, reduction=self.reduction)
 
 
     def transpose(self, x):
