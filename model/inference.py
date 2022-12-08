@@ -180,7 +180,7 @@ class MusicCLIPInfer(torch.nn.Module):
         # Run language layers from pretrianed bert
         lang_feats = self.model.bert(lang_feats, lang_attention_mask)
         print("lang_feats shape:", lang_feats.shape)
-        lang_feats = self.pooler(lang_feats)
+        lang_feats = self.model.pooler(lang_feats)
         print("lang_feats shape after bertpooler:", lang_feats.shape)
 
         # Extend the music emb output to text emb output
