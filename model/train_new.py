@@ -138,7 +138,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     
     print("shaped of dec_inp ", dec_inp.shape)  # need [128, 1, 512]
-    print("dec_inp:", dec_inp)
+    # print("dec_inp:", dec_inp)
 
     # load saved MusicCLIP model
     model = MusicCLIP(music_config, text_args)
