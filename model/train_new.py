@@ -130,13 +130,15 @@ def _train(music_config, text_args):
 
 def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # get input params for inference
-    train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
+    train_dset, _, _, _, _, _ = get_dataloader(music_config)
     # train_dset = torch.tensor(train_dset)
     dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).to(device)
     dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
+    del train_dset
     
+
     print("shaped of dec_inp ", dec_inp.shape)  # need [128, 1, 512]
     # print("dec_inp:", dec_inp)
 
@@ -163,7 +165,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     polyph_cls = None
     for epoch in range(MAX_INFERENCE_EPOCH):
         print("Starting epoch ", epoch)
-        lang_feats, music_feats, pooled_output = infer_model(
+        _, music_feats, pooled_output = infer_model(
             text,
             dec_inp, 
             dec_inp_bar_pos, 
@@ -175,7 +177,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
         music_pooled = model.music_pool(music_feats)
         print("shape of music_pooled:", music_pooled.shape)
 
-        loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
+        loss = c_loss(music_pooled, pooled_output, y, inference = True)  # music_pooled & pooled_output should have shape (bs, emd_dim)
 
         print("loss", loss.item())
         if loss < MAX_INFERENCE_LOSS:

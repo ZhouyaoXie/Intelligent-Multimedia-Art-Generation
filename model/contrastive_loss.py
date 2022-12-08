@@ -30,7 +30,7 @@ class ContrastiveLoss(nn.Module):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.reduction = reduction 
 
-    def forward(self, query, embed, y, norm = True):
+    def forward(self, query, embed, y, norm = True, inference = False):
         """ Computes contrastive loss as the cross entropy over cosine similarities between
         paired inputs, with positive pairs having label 1 and negative pairs label 0
         https://github.com/RElbers/info-nce-pytorch/blob/main/info_nce/__init__.py
@@ -44,14 +44,16 @@ class ContrastiveLoss(nn.Module):
         Returns:
             Contrastive loss
         """
-        # input will always be (positive, negative, positive, negative, ...) in pairs
-        # process input first 
-        y1, y2 = embed[::2, :], embed[1::2, :]
-        x1 = query[::2, :]
-        loss = self._loss(x1, y1, y2, norm)
-        # print('loss: ', loss)
-        return loss
-
+        if not inference:
+            # input will always be (positive, negative, positive, negative, ...) in pairs
+            # process input first 
+            y1, y2 = embed[::2, :], embed[1::2, :]
+            x1 = query[::2, :]
+            return self._loss(x1, y1, y2, norm)
+            # print('loss: ', loss)
+            return loss
+        else:
+            return self._loss(query, embed, None, norm)
         
     def _loss(self, x1, y1, y2, norm):
         if norm:
@@ -59,8 +61,9 @@ class ContrastiveLoss(nn.Module):
 
         # print('x1 size', x1.size())    # (bs, emb_dim)
         N, D = x1.shape[0], x1.shape[1]
-        y2 = y2.reshape((N, 1, D))  # (bs, num_neg_examples, emb_dim)
-        # print('y1 y2 size', y1.size(), y2.size())
+        if y2:
+            y2 = y2.reshape((N, 1, D))  # (bs, num_neg_examples, emb_dim)
+            # print('y1 y2 size', y1.size(), y2.size())
 
         # Cosine between positive pairs
         positive_logit = torch.sum(x1 * y1, dim=1, keepdim=True)
@@ -71,15 +74,20 @@ class ContrastiveLoss(nn.Module):
         # print('x1 shape: ', x1.shape)  # should be (bs, 1, emb_dim) @ (bs, emb_dim, num_neg_examples)
         # print('y2 trans shape: ', y2.shape)
 
-        negative_logits = x1 @ self.transpose(y2)
-        # print('negative logits shape: ', negative_logits.shape) # should be (bs, 1, num_neg_examples)
+        if y2:
+            negative_logits = x1 @ self.transpose(y2)
+            # print('negative logits shape: ', negative_logits.shape) # should be (bs, 1, num_neg_examples)
 
-        negative_logits = negative_logits.squeeze(1)  # should be (bs, num_neg_examples)
-        # print('negative logits shape: ', negative_logits.shape)
+            negative_logits = negative_logits.squeeze(1)  # should be (bs, num_neg_examples)
+            # print('negative logits shape: ', negative_logits.shape)
 
-        # First index in last dimension are the positive samples
-        logits = torch.cat([positive_logit, negative_logits], dim=1)
-        labels = torch.zeros(len(logits), dtype=torch.long, device=x1.device)
+            # First index in last dimension are the positive samples
+            logits = torch.cat([positive_logit, negative_logits], dim=1)
+            labels = torch.zeros(len(logits), dtype=torch.long, device=x1.device)
+
+        else:
+            logits = positive_logit 
+            labels = torch.ones(len(logits), dtype = torch.long, device = x1.device)
 
         # print(logits.shape, labels.shape)
 

@@ -162,8 +162,6 @@ class MusicCLIP(torch.nn.Module):
             sents, self.max_seq_length, self.tokenizer
         )
 
-        print("train_features shape:", len(train_features))
-
         input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long).to(device)
         input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long).to(device)
         segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long).to(device)
@@ -189,8 +187,6 @@ class MusicCLIP(torch.nn.Module):
         lang_attention_mask = (1.0 - extended_attention_mask) * -10000.0
 
         lang_feats = self.embeddings(input_ids, segment_ids)
-
-        print("lang_feats shape before encode_text returns:", lang_feats.shape)
 
         return lang_feats, lang_attention_mask
 
