@@ -63,7 +63,7 @@ def _train(music_config, text_args):
         music_config['data']['n_token'] = train_dset.vocab_size  # 333 in musemorphose; 405 in our data excluding Pad_None
 
     model = MusicCLIP(music_config, text_args)
-    print(model.state_dict().keys())
+    # print(model.state_dict().keys())
 
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay = 5e-4)
@@ -130,7 +130,6 @@ def _train(music_config, text_args):
 
 def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # get input params for inference
-    print('music config', music_config['data']['pos_train_split'])
     train_dset, val_dset, test_dset, train_dloader, val_dloader, test_dloader = get_dataloader(music_config)
     # train_dset = torch.tensor(train_dset)
     dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).permute(1,0).to(device)

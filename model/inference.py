@@ -203,8 +203,8 @@ class MusicCLIPInfer(torch.nn.Module):
         lang_feats, music_feats , pooled_output, _ = self.model(
             text, 
             dec_inp, 
-            dec_inp,   # this input is not used in MusicCLIP.forward(), just a placeholder
-            dec_inp_bar_pos,  # not used 
+            None,   # this input is not used in MusicCLIP.forward(), just a placeholder
+            None,  # not used 
             0, # not used 
             rfreq_cls = rfreq_cls, 
             polyph_cls = polyph_cls,

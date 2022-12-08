@@ -197,9 +197,9 @@ class MusicCLIP(torch.nn.Module):
         self,
         sents,
         enc_inp, 
-        dec_inp, 
-        dec_inp_bar_pos, 
-        num_bars,
+        dec_inp,    # TODO: not used 
+        dec_inp_bar_pos,    # not used 
+        num_bars,    # not used
         rfreq_cls=None, 
         polyph_cls=None, 
         padding_mask=None,
