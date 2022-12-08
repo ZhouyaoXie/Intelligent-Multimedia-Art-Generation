@@ -140,7 +140,7 @@ class MusicCLIPInfer(torch.nn.Module):
         else:
             dec_seg_emb_cat = dec_seg_emb
 
-        print("\n\n Before passing the values to the decoder \n\n")
+        print("\nBefore passing the values to the decoder: \n")
         print("the shape of dec_inp is ", dec_inp.shape)
         print("the shape of dec_seg_emb_cat", dec_seg_emb_cat.shape)
         dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
@@ -149,10 +149,10 @@ class MusicCLIPInfer(torch.nn.Module):
         return dec_out, dec_logits, mu, logvar
 
 
-    def text_encoder(self, lang_feats, lang_attention_mask):
-        for layer_module in self.layer:
-            lang_feats = layer_module(lang_feats, lang_attention_mask)
-        return lang_feats, lang_attention_mask
+    # def text_encoder(self, lang_feats, lang_attention_mask):
+    #     for layer_module in self.layer:
+    #         lang_feats = layer_module(lang_feats, lang_attention_mask)
+    #     return lang_feats, lang_attention_mask
 
 
     def forward(
@@ -169,36 +169,47 @@ class MusicCLIPInfer(torch.nn.Module):
         
         """
         # generate music
-        music_feats, dec_logits, mu, logvar = self.decode_music(
-            dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
-        )
-        print("music_feats shape:", music_feats.shape)
-        # encode text input
-        lang_feats, lang_attention_mask = self.model.encode_text(
-            text, token_type_ids
-        )
+        # music_feats, dec_logits, mu, logvar = self.decode_music(
+        #     dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
+        # )
+        # print("music_feats shape:", music_feats.shape)
+        # # encode text input
+        # lang_feats, lang_attention_mask = self.model.encode_text(
+        #     text, token_type_ids
+        # )
 
-        lang_feats = F.pad(
-            input=lang_feats, 
-            pad = (0, 0, 0, self.model.music_seq_len - self.model.text_seq_len, 0, 0)
-        )
+        # lang_feats = F.pad(
+        #     input=lang_feats, 
+        #     pad = (0, 0, 0, self.model.music_seq_len - self.model.text_seq_len, 0, 0)
+        # )
         
-        #Run language layers from pretrianed bert
-        lang_feats = self.model.bert(lang_feats, lang_attention_mask)
-        print("lang_feats shape:", lang_feats.shape)
+        # # Run language layers from pretrianed bert
+        # lang_feats = self.model.bert(lang_feats, lang_attention_mask)
+        # print("lang_feats shape:", lang_feats.shape)
 
-        #extend the music emb output to text emb output
-        music_feats = self.model.out_proj(music_feats)
-        print("music_feats shape:", music_feats.shape)
+        # # Extend the music emb output to text emb output
+        # music_feats = self.model.out_proj(music_feats)
+        # print("music_feats shape:", music_feats.shape)
 
-        # Run cross-modality layers
-        for layer_module in self.model.x_layers:
-            lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
-                                                  music_feats, music_attention_mask)
+        # # Run cross-modality layers
+        # for layer_module in self.model.x_layers:
+        #     lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
+        #                                           music_feats, music_attention_mask)
         
-        print("shape of lang_feats, music_feats:", lang_feats.shape, music_feats.shape)
-        pooled_output = self.model.pooler(lang_feats)
-        # pooled_output =  self.pooled_proj(pooled_output)
+        # print("shape of lang_feats, music_feats:", lang_feats.shape, music_feats.shape)
+        # pooled_output = self.model.pooler(lang_feats)
+        # # pooled_output =  self.pooled_proj(pooled_output)
+
+        lang_feats, music_feats , pooled_output, _ = self.model(
+            text, 
+            dec_inp, 
+            dec_inp,   # this input is not used in MusicCLIP.forward(), just a placeholder
+            dec_inp_bar_pos, 
+            rfreq_cls = rfreq_cls, 
+            polyph_cls = polyph_cls,
+            music_attention_mask = music_attention_mask,
+            token_type_ids = token_type_ids
+        )
         
         return lang_feats, music_feats , pooled_output
  

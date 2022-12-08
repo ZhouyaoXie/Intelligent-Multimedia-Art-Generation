@@ -137,6 +137,9 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
+    
+    print("text sample:", train_dset[0]['text'])
+    print("shaped of dec_inp ", dec_inp.shape)
 
     # load saved MusicCLIP model
     model = MusicCLIP(music_config, text_args)
@@ -170,12 +173,10 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
         )
         print("shaped of the pooled output shape  is ", pooled_output.shape)
         y = torch.tensor(np.ones(pooled_output.shape[0]))
-
         music_pooled = model.music_pool(music_feats)
         print("shape of music_pooled:", music_pooled.shape)
+
         loss = c_loss(music_pooled, pooled_output, y)  # music_pooled & pooled_output should have shape (bs, emd_dim)
-            
-        # loss = c_loss(pooled_output.reshape(-1), y)
 
         print("loss", loss.item())
         if loss < MAX_INFERENCE_LOSS:
@@ -205,7 +206,7 @@ def train(music_config, text_config = text_args):
     if mode == "TRAIN":
         _train(music_config, text_config)
     elif mode == "INFERENCE":
-        _inf("the test case", music_config, text_config)
+        _inf("a happy, cheerful song", music_config, text_config)
     else:
         raise ValueError("Unrecognized mode!")
 

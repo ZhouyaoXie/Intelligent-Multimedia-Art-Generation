@@ -249,7 +249,6 @@ class MusicCLIP(torch.nn.Module):
         lang_feats = self.bert(lang_feats, lang_attention_mask)
 
 
-
         # print('lang_attention_mask size', lang_attention_mask.size()) # [4, 1, 1, 128]
 
         # # repeat lang_feats & lang_attention_mask for all music bars
