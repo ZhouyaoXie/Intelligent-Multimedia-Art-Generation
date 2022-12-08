@@ -166,6 +166,7 @@ class MusicCLIPInfer(torch.nn.Module):
         music_feats, dec_logits, mu, logvar = self.decode_music(
             dec_inp, dec_inp_bar_pos, rfreq_cls, polyph_cls
         )
+        music_feats = music_feats.transpose(0, 1)
         print("music_feats shape:", music_feats.shape)
         # encode text input
         lang_feats, lang_attention_mask = self.model.encode_text(
@@ -182,7 +183,6 @@ class MusicCLIPInfer(torch.nn.Module):
         lang_feats = self.model.bert(lang_feats, lang_attention_mask)
         print("lang_feats shape:", lang_feats.shape)
         # lang_feats = self.model.pooler(lang_feats)
-        print("", lang_feats[:,0,0])
 
         # Extend the music emb output to text emb output
         music_feats = self.model.out_proj(music_feats)
