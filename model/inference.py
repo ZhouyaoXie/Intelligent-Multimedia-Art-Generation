@@ -171,6 +171,7 @@ class MusicCLIPInfer(torch.nn.Module):
         lang_feats, lang_attention_mask = self.model.encode_text(
             text, token_type_ids
         )
+        print("text, lang_feats shape:", text, lang_feats.shape)
 
         lang_feats = F.pad(
             input=lang_feats, 
