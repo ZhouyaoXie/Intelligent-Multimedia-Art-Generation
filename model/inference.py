@@ -122,10 +122,10 @@ class MusicCLIPInfer(torch.nn.Module):
         vae_latent_reshaped = vae_latent.reshape(enc_bt_size, enc_n_bars, -1)
 
         # [shape of dec_inp] (seqlen_per_sample, bsize)
-        print("shape of dec_input is ", dec_inp.shape)
+        # print("shape of dec_input is ", dec_inp.shape)
         # dec_inp = dec_inp.reshape(-1,1)
         dec_seg_emb = torch.zeros(dec_inp.size(0), dec_inp.size(1), self.d_vae_latent).to(device)
-        print("\n shape of dec_inp is ", dec_inp.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
+        # print("\n shape of dec_inp is ", dec_inp.shape, "\n shape pf dec_seg_emb is ", dec_seg_emb.shape, "\n\n\n")
 
         if rfreq_cls is not None and polyph_cls is not None and use_attr_cls:
             dec_rfreq_emb = self.rfreq_attr_emb(rfreq_cls)
@@ -134,9 +134,9 @@ class MusicCLIPInfer(torch.nn.Module):
         else:
             dec_seg_emb_cat = dec_seg_emb
 
-        print("\nBefore passing the values to the decoder: \n")
-        print("the shape of dec_inp is ", dec_inp.shape)
-        print("the shape of dec_seg_emb_cat", dec_seg_emb_cat.shape)
+        # print("\nBefore passing the values to the decoder: \n")
+        # print("the shape of dec_inp is ", dec_inp.shape)
+        # print("the shape of dec_seg_emb_cat", dec_seg_emb_cat.shape)
         dec_out = self.decoder(dec_inp, dec_seg_emb_cat)
         dec_logits = self.dec_out_proj(dec_out)
 
@@ -193,7 +193,7 @@ class MusicCLIPInfer(torch.nn.Module):
             lang_feats, music_feats = layer_module(lang_feats, lang_attention_mask,
                                                   music_feats, music_attention_mask)
         
-        print("shape of lang_feats, music_feats:", lang_feats.shape, music_feats.shape)
+        # print("shape of lang_feats, music_feats:", lang_feats.shape, music_feats.shape)
         pooled_output = self.model.pooler(lang_feats)
 
         # pooled_output =  self.pooled_proj(pooled_output)
@@ -379,7 +379,7 @@ class MusicCLIPInfer(torch.nn.Module):
         times = []
         piece_entropies = []
         for p in range(n_pieces):
-            out_file = os.path.join(out_dir, 'id{}_poly{}_rhym{}'.format(
+            out_file = os.path.join(out_dir, 'id{}_poly{}_rhym{}_song4'.format(
                 p, "None" if rfreq_cls is None else rfreq_cls, "None" if polyph_cls is None else polyph_cls
             ))      
             print ('[info] writing to ...', out_file)

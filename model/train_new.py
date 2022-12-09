@@ -139,7 +139,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     del train_dset
     
 
-    print("shaped of dec_inp ", dec_inp.shape)  # need [128, 1, 512]
+    # print("shaped of dec_inp ", dec_inp.shape)  # need [128, 1, 512]
     # print("dec_inp:", dec_inp)
 
     # load saved MusicCLIP model
@@ -172,15 +172,17 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
             rfreq_cls, 
             polyph_cls
         )
-        print("shaped of the pooled output shape  is ", pooled_output.shape)
+        # print("shaped of the pooled output shape  is ", pooled_output.shape)
         y = torch.tensor(np.ones(pooled_output.shape[0]))
         music_pooled = model.music_pool(music_feats)
-        print("shape of music_pooled:", music_pooled.shape)
+        # print("shape of music_pooled:", music_pooled.shape)
 
         loss = c_loss(music_pooled, pooled_output, y, inference = True)  # music_pooled & pooled_output should have shape (bs, emd_dim)
-
-        print("loss", loss.item())  
+        
+        if epoch % 100 == 0:
+            print("loss", loss.item())  
         if loss.item() < MAX_INFERENCE_LOSS:
+            print("terminating training early because loss reaches target:", loss.item())
             break 
         optimizer.zero_grad()
         loss.backward()
@@ -211,6 +213,3 @@ def train(music_config, text_config = text_args):
     else:
         raise ValueError("Unrecognized mode!")
 
-# def __main__():
-#     train(music_config, text_args)
-# train(music_config, text_args)
