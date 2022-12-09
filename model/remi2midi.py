@@ -128,6 +128,8 @@ def remi2midi(events, output_midi_path=None, is_full_event=False, return_first_t
       miditoolkit.Marker('Bar-{}'.format(b+1), int(DEFAULT_BAR_RESOL * b))
     )
 
+  print('len of temp_notes, temp_tempos, temp_chords', len(temp_notes), len(temp_tempos), len(temp_chords))
+
   if output_midi_path is not None:
     midi_obj.dump(output_midi_path)
 
