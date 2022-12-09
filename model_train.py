@@ -54,7 +54,7 @@ if __name__ == "__main__":
 #     print("min_lr: ", data_config["training"]["min_lr"])
     
     train(music_config = data_config, text_config = text_args)
-    # with open("outputs/id0_polyNone_rhymNone.txt", 'r') as f:
+    # with open("../outputs/id0_polyNone_rhymNone.txt", 'r') as f:
     #     out_file = f.readlines()
     # song = [s.strip() for s in out_file]
     # remi2midi(song, 'id0_polyNone_rhymNone.mid', enforce_tempo=True)
