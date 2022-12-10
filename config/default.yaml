@@ -46,7 +46,7 @@ training:
     ckpt_dir:         ./ckpt/enc_dec_12L-16_bars-seqlen_1280
     trained_steps:    0
     max_epochs:       1000
-    max_lr:           5.0e-5
+    max_lr:           1.0e-5
     min_lr:           5.0e-6
     lr_warmup_steps:  200   
     lr_decay_steps:   150000
@@ -60,7 +60,7 @@ training:
     val_interval:     50
     mode:   INFERENCE
     output_path:      outputs/
-    max_inference_epoch:  100000
+    max_inference_epoch:  10000
     max_inference_loss:   0.0001
 
 generate:

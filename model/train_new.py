@@ -132,8 +132,8 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     # get input params for inference
     train_dset, _, _, _, _, _ = get_dataloader(music_config)
     # train_dset = torch.tensor(train_dset)
-    dec_inp = torch.tensor(train_dset[0]['dec_input']).reshape(-1,1).to(device)
-    dec_inp_bar_pos = torch.tensor(train_dset[0]['bar_pos']).reshape(-1,1).to(device)
+    dec_inp = torch.tensor(train_dset[1]['dec_input']).reshape(-1,1).to(device)
+    dec_inp_bar_pos = torch.tensor(train_dset[1]['bar_pos']).reshape(-1,1).to(device)
     # rfreq_cls = torch.tensor(train_dset[0]['rhymfreq_cls']).reshape(-1,1).permute(1,0).to(device)
     # polyph_cls = torch.tensor(train_dset[0]['polyph_cls']).reshape(-1,1).permute(1,0).to(device)
     del train_dset
