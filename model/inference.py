@@ -308,7 +308,7 @@ class MusicCLIPInfer(torch.nn.Module):
                 event_pos = get_beat_idx(word_event)
                 if not event_pos >= cur_pos:
                     failed_cnt += 1
-                    print ('[info] position not increasing, failed cnt:', failed_cnt, '; cur_pos:', cur_pos)
+                    # print ('[info] position not increasing, failed cnt:', failed_cnt, '; cur_pos:', cur_pos)
                     if failed_cnt >= 128:
                         print ('[FATAL] model stuck, exiting ...')
                         return generated
@@ -379,7 +379,7 @@ class MusicCLIPInfer(torch.nn.Module):
         times = []
         piece_entropies = []
         for p in range(n_pieces):
-            out_file = os.path.join(out_dir, 'id{}_poly{}_rhym{}_song4'.format(
+            out_file = os.path.join(out_dir, 'id{}_poly{}_rhym{}_100k_epochs_pop_song'.format(
                 p, "None" if rfreq_cls is None else rfreq_cls, "None" if polyph_cls is None else polyph_cls
             ))      
             print ('[info] writing to ...', out_file)
