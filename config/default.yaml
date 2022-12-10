@@ -46,9 +46,9 @@ training:
     ckpt_dir:         ./ckpt/enc_dec_12L-16_bars-seqlen_1280
     trained_steps:    0
     max_epochs:       1000
-    max_lr:           1.0e-4
+    max_lr:           5.0e-5
     min_lr:           5.0e-6
-    lr_warmup_steps:  200
+    lr_warmup_steps:  200   
     lr_decay_steps:   150000
     no_kl_steps:      10000
     kl_cycle_steps:   5000
