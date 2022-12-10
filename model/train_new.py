@@ -208,7 +208,7 @@ def train(music_config, text_config = text_args):
     if mode == "TRAIN":
         _train(music_config, text_config)
     elif mode == "INFERENCE":
-        _inf(["a happy, cheerful song"], music_config, text_config)
+        _inf(["great pop music about love"], music_config, text_config)
     else:
         raise ValueError("Unrecognized mode!")
 
