@@ -155,7 +155,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     infer_model.to(device)
 
     # initialize training optimizer and loss
-    optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 5e-4)
+    optimizer = optim.Adam(infer_model.parameters(), lr=lr, weight_decay = 1e-7)
     c_loss = ContrastiveLoss(bs)
 
     start_time  = time.time()
@@ -208,7 +208,7 @@ def train(music_config, text_config = text_args):
     if mode == "TRAIN":
         _train(music_config, text_config)
     elif mode == "INFERENCE":
-        _inf(["great pop music about love"], music_config, text_config)
+        _inf(["a catchy rock ballad song"], music_config, text_config)
     else:
         raise ValueError("Unrecognized mode!")
 
