@@ -163,7 +163,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
     rfreq_cls = None
     polyph_cls = None
     for epoch in range(MAX_INFERENCE_EPOCH):
-        print("Starting epoch ", epoch)
+        # print("Starting epoch ", epoch)
         _, music_feats, pooled_output = infer_model(
             text,
             dec_inp, 
@@ -179,7 +179,7 @@ def _inf(text, music_config, text_args, model_save_path = None, n_pieces = 1):
         loss = c_loss(music_pooled, pooled_output, y, inference = True)  # music_pooled & pooled_output should have shape (bs, emd_dim)
         
         if epoch % 100 == 0:
-            print("loss", loss.item())  
+            print("epoch:", epoch, "; loss:", loss.item())  
         if loss.item() < MAX_INFERENCE_LOSS:
             print("terminating training early because loss reaches target:", loss.item())
             break 
