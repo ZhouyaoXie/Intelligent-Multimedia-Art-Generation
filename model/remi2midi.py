@@ -276,6 +276,9 @@ def chord2notes(chord_name, prev_pitch):
                     res[k] += i * 12
                 break
     # print(res)
+    if res[-1] > 127:
+        for i in range(len(res)):
+            res[i] -= 12
     return res
 
 
@@ -400,10 +403,11 @@ def remi2midi(events, output_midi_path=None, note_or_chord="note", is_full_event
             miditoolkit.Marker('Bar-{}'.format(b+1), int(DEFAULT_BAR_RESOL * b))
         )
 
+    # print("used", used_chords_n_pitches)
+    
     if output_midi_path is not None:
         midi_obj.dump(output_midi_path)
 
-    # print("used", used_chords_n_pitches)
     if not return_first_tempo:
         return midi_obj
     else:
