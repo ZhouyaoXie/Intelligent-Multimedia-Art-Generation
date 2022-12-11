@@ -2,14 +2,14 @@ import os, pickle, random, copy
 import numpy as np
 
 import miditoolkit
-
+import sys
 
 ##############################
 # use example #
-midi_path = "xxx.mid"
-events = read_generated_txt(midi_path)
-remi2midi(events, note_or_chord="note", output_midi_path="test_note.mid", is_full_event=False)
-remi2midi(events, note_or_chord="chord", output_midi_path="test_chord.mid", is_full_event=False)
+# midi_path = "xxx.mid"
+# events = read_generated_txt(midi_path)
+# remi2midi(events, note_or_chord="note", output_midi_path="test_note.mid", is_full_event=False)
+# remi2midi(events, note_or_chord="chord", output_midi_path="test_chord.mid", is_full_event=False)
 ##############################
 
 
@@ -408,3 +408,13 @@ def remi2midi(events, output_midi_path=None, note_or_chord="note", is_full_event
         return midi_obj
     else:
         return midi_obj, temp_tempos
+
+
+if __name__ == "__main__":
+    midi_path = sys.argv[1]
+    events = read_generated_txt(midi_path)
+    remi2midi(events, note_or_chord="note", output_midi_path="test_note.mid", is_full_event=False)
+    remi2midi(events, note_or_chord="chord", output_midi_path="test_chord.mid", is_full_event=False)
+
+
+
